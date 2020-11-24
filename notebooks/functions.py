@@ -1,4 +1,3 @@
-
 def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
                                   remove_same_location_faults = True):
     '''function that pre-processes the raw csv files:
@@ -99,11 +98,16 @@ def floor_time(df,time_col,units = 'H'):
 def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_durations = False, quadrant=None):
     '''function that aggregates fault data by specified metric (agg_type) and quadrant.
     - The quadrant parameter is used in case you want to filter for a specifc quadrant
-    (e.g., if you only want observations from quadrant 1)'''
+    (e.g., if you only want observations from quadrant 1)
+    - agg type is count/mean/sum
+    -fault_level is 'fault ID type' or 'Number' or 'PLC' or 'Quadrant'
+    -agg_col should be duration
+    -break_durations if you want to bucket up durations in short, medium and long
+    '''
     
     
     if break_durations == True:
-        df['Duration_category'] = df.groupby("fault ID type")["Duration"].apply(lambda x: pd.cut(x, 3,labels=['short','medium','long']))
+        df['Duration_category'] = df.groupby(fault_level)["Duration"].apply(lambda x: pd.cut(x, 3,labels=['short','medium','long']))
         cols = [fault_level,'Duration_category']
         df['period'] = df[cols].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
         df = df.groupby([time_col,'Quadrant','period'],as_index = False).agg({agg_col:agg_type})
@@ -112,9 +116,12 @@ def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_du
         df = pd.pivot_table(df,values = agg_col,index = time_col,columns = ['period'],fill_value=0)
         print('Duration broken into categories Short, Medium, Long')
     else:
-        df = df.groupby([time_col,'Quadrant',fault_level],as_index = False).agg({agg_col:agg_type})
+        if fault_level == 'Quadrant':
+            df = df.groupby([time_col,'Quadrant'],as_index = False).agg({agg_col:agg_type})
+        else:
+            df = df.groupby([time_col,'Quadrant',fault_level],as_index = False).agg({agg_col:agg_type})
         if quadrant != None:
-            df = df[df['Quadrant'].isin([quadrant, 0])] 
+            df = df[df['Quadrant'].isin([quadrant, 0])]  
         df = pd.pivot_table(df,values = agg_col,index = time_col,columns = fault_level,fill_value=0)
         
     print('Faults aggregated and pivoted')
@@ -150,7 +157,7 @@ def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
     print('Availability and fault datasets merged')
     return(df)
 
-def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
+def run_model(df, random_state = None, num_trees=100, criterion = 'mse',max_depth=None, dtree=True,select=True,visualise=False):
     
     '''function that runs ML models based off chosen features and selected target variable:
     
@@ -169,6 +176,10 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
     dtree: option for running decision tree model (True by default)
     select: option for running selected random forest model (True by default)
     visualise: option for outputing decision tree visualisation (False by default)
+    criterion: type of criterion used, either 'mse' or 'mae' ('mse' by default)
+    max_depth: maximum depth of the tree (None by defaiult)
+    random_state: ensures same split for comparison of results for different models (None by defaiult)
+    
     
     Note: preprocessing functions must be run prior to this function to ensure dataframe is formatted correctly
     
@@ -190,7 +201,7 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
     
     from sklearn.model_selection import train_test_split
     
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=random_state)
     
     #Set up metrics dataframe
     
@@ -206,7 +217,7 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
 
         from sklearn.tree import DecisionTreeRegressor
 
-        dtree = DecisionTreeRegressor()
+        dtree = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
         dtree.fit(X_train,y_train)
 
         #Predicting using decision tree
@@ -242,7 +253,7 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
 
     from sklearn.ensemble import RandomForestRegressor
 
-    rfr = RandomForestRegressor(n_estimators=num_trees,oob_score = True)
+    rfr = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
     rfr.fit(X_train, y_train)
     
     #Predicting using random forest
@@ -257,23 +268,38 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
                             np.sqrt(metrics.mean_squared_error(y_test, rf_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
                             rfr.oob_score_,rfr.score(X_train,y_train),rfr.score(X_test,y_test)]
     
-    #Output Scatter and Distribution
+    #Output Test Scatter and Distribution
     
     plt.scatter(y_test,rf_pred)
     plt.xlabel('Actual Downtime')
     plt.ylabel('Predicted Downtime')
-    plt.title('Predicted vs Actual Scatter from RF')
+    plt.title('Predicted vs Actual Scatter from RF Test')
     
     plt.figure()
     sns.distplot(y_test-rf_pred)
-    plt.title('Distrubution of Residuals from RF')
+    plt.title('Distrubution of Residuals from RF Test')
+    plt.xlabel('Residual')
+    
+     #Output Train Scatter and Distribution
+    
+    plt.figure()
+    plt.scatter(y_train,rfr.predict(X_train))
+    plt.xlabel('Actual Downtime')
+    plt.ylabel('Predicted Downtime')
+    plt.title('Predicted vs Actual Scatter from RF Train')
+    
+    plt.figure()
+    sns.distplot(y_train-rfr.predict(X_train))
+    plt.title('Distrubution of Residuals from RF Train')
     plt.xlabel('Residual')
     
     #Output Feature Importance
     
-    Importance = pd.DataFrame({'Importance': rfr.feature_importances_}, index=X.columns).sort_values(by='Importance', ascending=False)
-    plt.figure()
-    sns.barplot(data = Importance.head(10), x= Importance.head(10).index, y='Importance')
+    Importance = pd.DataFrame({'Importance': rfr.feature_importances_,'Feature':X.columns}).sort_values(by='Importance', ascending=False)
+    Importance = Importance.reset_index()
+    Importance = Importance.drop('index',axis=1)
+    plt.figure(figsize=(20,5))
+    sns.barplot(data = Importance, x= 'Feature', y='Importance',order=Importance[:10].sort_values('Importance',ascending=False).Feature)
     plt.xlabel('Feature')
     print(Importance.head(10))
     
@@ -285,7 +311,7 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
 
         from sklearn.feature_selection import SelectFromModel
 
-        sel = SelectFromModel(RandomForestRegressor(n_estimators = num_trees))
+        sel = SelectFromModel(RandomForestRegressor(n_estimators = num_trees,criterion = criterion,max_depth=max_depth))
         sel.fit(X_train, y_train)
 
         #Set selected features
@@ -298,11 +324,11 @@ def run_model(df,num_trees=100,dtree=True,select=True,visualise=False):
 
         #Train Test Split
 
-        X_train, X_test, y_train, y_test = train_test_split(X_sel, y, test_size=0.3)
+        X_train, X_test, y_train, y_test = train_test_split(X_sel, y, test_size=0.3,random_state=random_state)
 
         #Fit reduced model
 
-        rfr_sel = RandomForestRegressor(n_estimators=num_trees,oob_score=True)
+        rfr_sel = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score=True)
         rfr_sel.fit(X_train,y_train)
 
         #Predicting using random forest
