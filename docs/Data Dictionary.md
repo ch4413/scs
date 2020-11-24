@@ -22,3 +22,7 @@
 | Datetime | Timestamp at the beginning of availability hour | Timestamp | 01/01/2020 00:00:00 | 
 | Availability | Fraction of hour Picking Station was available | Numeric | 0.1|
 
+
+## Active Totes
+
+TBA - review totes data
