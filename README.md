@@ -37,8 +37,14 @@ Independently from this, we are creating a rules-based engine for associating fa
 ## Data
 
 Data is stored on the Sharepoint site of M&S in the Data directory. We will start by focussing on the `availability` and `SCS Alerts` data.
-* `availability` is for October and November 2020
-* `SCS Alerts` for 
+* `availability` October and November 2020
+* `SCS Alerts` June to November 2020
+
+## EDA
+
+* Do the types of error by station, by quadrant change over time?
+* Are time events independent?
+* Are quadrant independent?
 
 ### Getting started
 
