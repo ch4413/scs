@@ -140,6 +140,27 @@ def availability_quadrant_mean(df,time_col,quadrant=None):
     print('Availability data aggregated by quadrant')
     return(df)
 
+def weight_hours(df,weights = [1,0.5,0.2]):
+    
+    '''function to include weighted fault data from previous hours
+    
+    Parameters:
+    
+    df: input data frame
+    weights: weights for hours with first element in array being weight for current hour, second the previous hour etc.
+    
+    '''
+    
+    df_weight = pd.DataFrame(data=np.zeros((len(df)-2,len(df.columns))),index=df.index[2:],columns = df.columns)
+    
+    for i in range(len(weights)-1,len(df)):
+        
+        for x in range(len(weights)):
+         
+            df_weight.iloc[i-2] = df_weight.iloc[i-2] + df.iloc[i-x]*weights[x]
+
+    print('Previous Hours Weighted')
+    return(df_weight)
 
 def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
     '''function that merges availability and fault datasets by date index'''
