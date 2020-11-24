@@ -164,21 +164,22 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
     1. performs test train split,
     2. runs decision tree model (if required), 
     3. outputs decision tree visulation (if required),
-    4. runs random forest model
-    5. outputs residual distrubution, scatter plot and feature importance
-    6. runs selected random forest model (if required)
+    4. runs random forest model or linear model
+    5. outputs residual distrubution, scatter plot and feature importance/coefficient
+    6. runs selected model (if required)
     7. outputs regression metrics from model(s) 
     
     Parameters:
     
     df: input data frame containing features and target variable
+    modeltype: Linear or random forest model (RF by default)
     num_trees: number of tree for random forrest model (100 by default)
     dtree: option for running decision tree model (True by default)
     select: option for running selected random forest model (True by default)
     visualise: option for outputing decision tree visualisation (False by default)
     criterion: type of criterion used, either 'mse' or 'mae' ('mse' by default)
-    max_depth: maximum depth of the tree (None by defaiult)
-    random_state: ensures same split for comparison of results for different models (None by defaiult)
+    max_depth: maximum depth of the tree (None by default)
+    random_state: ensures same split for comparison of results for different models (None by default)
     cv: to run cross validation on model, number indicated number of folds (False by default)
     
     
@@ -206,11 +207,11 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
     
     #Set up metrics dataframe
     
-    if model_type == 'RF':
+    if modeltype == 'RF':
     
         fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
     
-    if model_type == 'LM':
+    if modeltype == 'LM':
         
         fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','R2_Train','R2_Pred'])
     
@@ -226,12 +227,12 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
 
             from sklearn.tree import DecisionTreeRegressor
 
-            dtree = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
-            dtree.fit(X_train,y_train)
+            dtree_model = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
+            dtree_model.fit(X_train,y_train)
 
             #Predicting using decision tree
 
-            dtree_pred = dtree.predict(X_test)
+            dtree_pred = dtree_model.predict(X_test)
 
             #Fill dataframe with metrics
 
@@ -239,7 +240,7 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
 
             fit_metrics['D_Tree'] = [metrics.mean_absolute_error(y_test, dtree_pred),metrics.mean_squared_error(y_test, dtree_pred),
                                     np.sqrt(metrics.mean_squared_error(y_test, dtree_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
-                                    'N/A',dtree.score(X_train,y_train),dtree.score(X_test,y_test)]
+                                    'N/A',dtree_model.score(X_train,y_train),dtree_model.score(X_test,y_test)]
 
             #Tree visulisation
 
@@ -253,96 +254,98 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
                 features = list(df.columns[2:])
 
                 dot_data = StringIO()  
-                export_graphviz(dtree, out_file=dot_data,feature_names=features,filled=True,rounded=True)
+                export_graphviz(dtree_model, out_file=dot_data,feature_names=features,filled=True,rounded=True)
 
                 graph = pydot.graph_from_dot_data(dot_data.getvalue())  
                 Image(graph[0].create_png())  
 
         #Fit Model
         
-        if modeltype == 'RF':
-        
-            from sklearn.ensemble import RandomForestRegressor
-            model = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
-            
-        if modeltype == 'LM':    
+    if modeltype == 'RF':
 
-            from sklearn.linear_model import LinearRegression
-            model = LinearRegression()
-            
-        model.fit(X_train, y_train)
+        from sklearn.ensemble import RandomForestRegressor
+        model = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
 
-        #Predicting using random forest
+    if modeltype == 'LM':    
 
-        pred = model.predict(X_test)
+        from sklearn.linear_model import LinearRegression
+        model = LinearRegression()
 
-        #Fill dataframe with metrics
+    model.fit(X_train, y_train)
 
-        mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
-        
-        if modeltype == 'RF':
-        
+    #Predicting using random forest
+
+    pred = model.predict(X_test)
+
+    #Fill dataframe with metrics
+
+    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
+
+    if modeltype == 'RF':
+
         fit_metrics[str(modeltype)] = [metrics.mean_absolute_error(y_test, pred),metrics.mean_squared_error(y_test, pred),
                                 np.sqrt(metrics.mean_squared_error(y_test, pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
                                 model.oob_score_,model.score(X_train,y_train),model.score(X_test,y_test)]
-        
-        if modeltype == 'LM':
 
-            fit_metrics[str(modeltype)] = [metrics.mean_absolute_error(y_test, pred),metrics.mean_squared_error(y_test, pred),
-                                np.sqrt(metrics.mean_squared_error(y_test, pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
-                                model.score(X_train,y_train),model.score(X_test,y_test)]
-            
-        #Output Test Scatter and Distribution
+    if modeltype == 'LM':
 
-        plt.scatter(y_test,pred)
-        plt.xlabel('Actual Downtime')
-        plt.ylabel('Predicted Downtime')
-        plt.title('Predicted vs Actual Scatter from Test')
+        fit_metrics[str(modeltype)] = [metrics.mean_absolute_error(y_test, pred),metrics.mean_squared_error(y_test, pred),
+                            np.sqrt(metrics.mean_squared_error(y_test, pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
+                            model.score(X_train,y_train),model.score(X_test,y_test)]
 
-        plt.figure()
-        sns.distplot(y_test-pred)
-        plt.title('Distrubution of Residuals from Test')
-        plt.xlabel('Residual')
+    #Output Test Scatter and Distribution
 
-        #Output Train Scatter and Distribution
+    plt.scatter(y_test,pred)
+    plt.xlabel('Actual Downtime')
+    plt.ylabel('Predicted Downtime')
+    plt.title('Predicted vs Actual Scatter from Test')
 
-        plt.figure()
-        plt.scatter(y_train,model.predict(X_train))
-        plt.xlabel('Actual Downtime')
-        plt.ylabel('Predicted Downtime')
-        plt.title('Predicted vs Actual Scatter from Train')
+    plt.figure()
+    sns.distplot(y_test-pred)
+    plt.title('Distrubution of Residuals from Test')
+    plt.xlabel('Residual')
 
-        plt.figure()
-        sns.distplot(y_train-model.predict(X_train))
-        plt.title('Distrubution of Residuals from Train')
-        plt.xlabel('Residual')
+    #Output Train Scatter and Distribution
 
-        
-        if modeltype = 'RF':
-        
-            #Output Feature Importance
+    plt.figure()
+    plt.scatter(y_train,model.predict(X_train))
+    plt.xlabel('Actual Downtime')
+    plt.ylabel('Predicted Downtime')
+    plt.title('Predicted vs Actual Scatter from Train')
 
-            Importance = pd.DataFrame({'Importance': model.feature_importances_,
-                                       'Feature':X.columns}).sort_values(by='Importance', ascending=False)
-            Importance = Importance.reset_index()
-            Importance = Importance.drop('index',axis=1)
-            plt.figure(figsize=(20,5))
-            sns.barplot(data = Importance, x= 'Feature', y='Importance',
-                        order=Importance[:10].sort_values('Importance',ascending=False).Feature)
-            plt.xlabel('Feature')
-            print('Feature Importance Ranking: \n \n',Importance.head(10))
+    plt.figure()
+    sns.distplot(y_train-model.predict(X_train))
+    plt.title('Distrubution of Residuals from Train')
+    plt.xlabel('Residual')
 
-        if modeltype = 'LM':
-            
-            #Output model coefficients
-            
-            Coeff = pd.DataFrame({'Coefficients': model.coef_,
-                                       'Feature':X.columns}).sort_values(by='Coefficients', ascending=False)
-            plt.figure(figsize=(20,5))
-            sns.barplot(data = Coefficients, x= 'Feature', y='Coefficients',
-                        order=Coeff[:10].sort_values('Coefficients',ascending=False).Feature)
-            plt.xlabel('Feature')
-            print('Feature Coefficient Ranking: \n \n',Importance.head(10)
+
+    if modeltype == 'RF':
+
+        #Output Feature Importance
+
+        Importance = pd.DataFrame({'Importance': model.feature_importances_,
+                                   'Feature':X.columns}).sort_values(by='Importance', ascending=False)
+        Importance = Importance.reset_index()
+        Importance = Importance.drop('index',axis=1)
+        plt.figure(figsize=(20,5))
+        sns.barplot(data = Importance, x= 'Feature', y='Importance',
+                    order=Importance[:10].sort_values('Importance',ascending=False).Feature)
+        plt.xlabel('Feature')
+        print('Feature Importance Ranking: \n \n',Importance.head(10))
+
+    if modeltype == 'LM':
+
+        #Output model coefficients
+
+        Coeff = pd.DataFrame({'Coefficients': model.coef_,
+                                   'Feature':X.columns}).sort_values(by='Coefficients')
+        Coeff = Coeff.reset_index()
+        Coeff = Coeff.drop('index',axis=1)
+        plt.figure(figsize=(20,5))
+        sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',
+                    order=Coeff[:10].sort_values('Coefficients').Feature)
+        plt.xlabel('Feature')
+        print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
             
     if select != False:
     
@@ -381,20 +384,20 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
 
         mape = np.mean(np.abs((y_test - sel_pred) / np.abs(y_test)))
                   
-        if modeltype = 'RF':
+        if modeltype == 'RF':
 
-            fit_metrics[str(modeltype) + 'Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
-                                                   metrics.mean_squared_error(y_test, rsel_pred),
+            fit_metrics[str(modeltype) + ' Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
+                                                   metrics.mean_squared_error(y_test, sel_pred),
                                                    np.sqrt(metrics.mean_squared_error(y_test, sel_pred)),
                                                    round(mape * 100, 2),round(100*(1 - mape), 2),
                                                    model.oob_score_,
                                                    model.score(X_train,y_train),
                                                    model.score(X_test,y_test)]
                   
-         if modeltype = 'LM':
+        if modeltype == 'LM':
                   
-                  fit_metrics[str(modeltype) + 'Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
-                                                   metrics.mean_squared_error(y_test, rsel_pred),
+            fit_metrics[str(modeltype) + ' Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
+                                                   metrics.mean_squared_error(y_test, sel_pred),
                                                    np.sqrt(metrics.mean_squared_error(y_test, sel_pred)),
                                                    round(mape * 100, 2),round(100*(1 - mape), 2),
                                                    model.score(X_train,y_train),
@@ -412,16 +415,16 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
         
         from sklearn.model_selection import cross_val_score
         
-        if dtree == True:          
+        if (dtree == True) and (modeltype == 'RF'):          
                   
-            scores = cross_val_score(dtree, X, y, cv=cv)
+            scores = cross_val_score(dtree_model, X, y, cv=cv)
             df_cross_val['D_Tree R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
         scores = cross_val_score(model, X, y, cv=cv)
-        df_cross_val[str(modeltype) + 'R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
+        df_cross_val[str(modeltype) + ' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
         scores = cross_val_score(model, X_sel, y, cv=cv)
-        df_cross_val[[str(modeltype) + 'Reduced R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
+        df_cross_val[str(modeltype) + ' Reduced R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
         print('\nCross Validation Scores: \n \n', df_cross_val)
 
