@@ -2,7 +2,7 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
                                   remove_same_location_faults = True):
     '''function that pre-processes the raw csv files:
     1. converts date columns to datetime objects,
-    2. assigns quandrants by PLC location, 
+    2. assigns quandrants and modules, 
     3. drops rows with missing values, 
     4. drops faults that happen in same location at same time (keeps fault with max duration) - if selected 
     
@@ -60,11 +60,13 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
             Quad.append(3)
         elif i in Quad_4:
             Quad.append(4)
-        else:
-            Quad.append(0)
     av['Quadrant'] = Quad
     
     print('Quadrants Assigned')
+    
+    av['Module'] = av['Pick Station'].str[3].astype(int)*10 + av['Pick Station'].str[4].astype(int)
+    
+    print('Modules Assigned')
     
     fa['Entry time'] = pd.to_datetime(fa['Entry time'],dayfirst=True)
     av['Datetime'] = pd.to_datetime(av['Datetime'],dayfirst=True)
@@ -128,16 +130,44 @@ def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_du
     return(df)
 
 
-def availability_quadrant_mean(df,time_col,quadrant=None):
-    '''function to aggregate availability at the quadrant level'''
+def availability_quadrant_mean(df,time_col, level = None, selection = None):
+    '''function to aggregate availability at chosen level:
     
-    if quadrant != None:
-        print("Output will contain data only for Quadrant:" + str(quadrant))
-        df = df[df['Quadrant'].isin([quadrant, 0])] 
+    1. Selects availability data revelevent to chosen level
+    2. Aggregates Availability Data
+    
+    Parameters:
+    
+    df: input dataframe
+    time_col: column name containing time
+    level: which level to aggregate at (i.e. Quadrant/Module/Pick Station)
+    selected: selected area within that level (i.e. Quadrant 1/Module 1/PPT011)
+    
+    '''
+    
+    if level != None:
+        print("Output will contain data only for " + str(level) + ": " + str(selection))
+        
+        if level == 'Quadrant':
+        
+            df = df[df['Quadrant']==selection]
+            
+        elif level == 'Module':
+        
+            df = df[df['Module']==selection]
+        
+        elif level == 'Pick Station':
+            
+            df = df[df['Pick Station']==selection]
+        
+        else:
+            
+            print('\nNot a valid level, aggregating from all data\n')
+    
     df = df.groupby([time_col],as_index=False).agg('mean')
-    df = df.drop(['Quadrant'],axis=1)
+    df = df.drop(['Quadrant','Module'],axis=1)
     df = df.set_index(time_col)
-    print('Availability data aggregated by quadrant')
+    print('Availability data aggregated')
     return(df)
 
 def weight_hours(df,weights = [1,0.5,0.2]):
@@ -151,13 +181,13 @@ def weight_hours(df,weights = [1,0.5,0.2]):
     
     '''
     
-    df_weight = pd.DataFrame(data=np.zeros((len(df)-2,len(df.columns))),index=df.index[2:],columns = df.columns)
+    df_weight = pd.DataFrame(data=np.zeros((len(df)-len(weights)+1,len(df.columns))),index=df.index[len(weights)-1:],columns = df.columns)
     
     for i in range(len(weights)-1,len(df)):
         
         for x in range(len(weights)):
          
-            df_weight.iloc[i-2] = df_weight.iloc[i-2] + df.iloc[i-x]*weights[x]
+            df_weight.iloc[i-len(weights)+1] = df_weight.iloc[i-len(weights)+1] + df.iloc[i-x]*weights[x]
 
     print('Previous Hours Weighted')
     return(df_weight)
