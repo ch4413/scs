@@ -10,3 +10,4 @@ setup(name='scsavailability',
                'scsavailability.data',
                'scsavailability.test']
      )
+     
