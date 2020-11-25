@@ -14,7 +14,10 @@
 2. Return most important features from model.
 * Which features are have strongest impact on model?
 * How much time is associated with each downtime?
-* How much pick station/quadrant/module/scs downtime is associated to each machine fault/machine fault category
+
+Jamie Edit Suggestion:
+
+(How much pick station/quadrant/module/scs downtime is associated to each machine fault/machine fault category)
 
 *"Error X has the largest influence on availability/downtime"* or *"Error Y contributes X minutes to downtime per hour"*
 
@@ -28,11 +31,13 @@ Model and data considerations:
 
 DS: data refresh is currently every 12 hours, with an aim to have it refreshing every 15 minutes. We are currently thinking of re-fitting the model for each new data.
 
-## We define a high-performing model as:
+Jamie Edit Suggestion:
 
-* High cross validated R2 prediction score
-* Model feeds effectively into dashboard to give give clear prioritised actions allowing engineers to perform more effective maintenance
-* Engineers fixing faults identified as important by the model leads to an increase in availability over time without significantly increasing the amount of time they spend fixing faults)
+(What consistutes a well performing model?
+
+*High cross validated R2 prediction score
+*Model feeds effectively into dashboard to give give clear prioritised actions allowing engineers to perform more effective maintenance
+*Engineers fixing faults identified as important by the model leads to an increase in availability over time without significantly increasing the amount of time they spend fixing faults)
 
 ## Current state
 
@@ -44,15 +49,18 @@ Independently from this, we are creating a rules-based engine for associating fa
 ## Data
 
 Data is stored on the Sharepoint site of M&S in the Data directory. We will start by focussing on the `availability` and `SCS Alerts` data.
-* `availability` for the whole system (mechanical and flow) October and November 2020
-* `SCS Alerts` for mechanical faults June to November 2020
-* 
+* `availability` October and November 2020
+* `SCS Alerts` June to November 2020
 
 ## EDA
 
 * Do the types of error by station, by quadrant change over time?
 * Are time events independent?
-* Are quadrants independent?
+* Are quadrant independent?
+
+Jamie Edit Suggestion:
+
+(Are quadrants independent)
 
 ### Getting started
 
