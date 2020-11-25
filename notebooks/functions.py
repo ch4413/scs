@@ -26,7 +26,7 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     Quad_4 = ['C'  + str(i) for i in range(13,15)] + ['SCSM' + str(i) for i in range(17,21)]
 
 
-    #Assing faults to Quadrants  
+    #Assign faults to Quadrants  
     Quad = []
 
     for i in fa['PLC']:
@@ -49,7 +49,7 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     Quad_4 = ['PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
 
 
-    #Assing availability to Quadrants  
+    #Assign availability to Quadrants  
     Quad = []
     for i in av['Pick Station']:
         if i in Quad_1:
@@ -63,6 +63,110 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     av['Quadrant'] = Quad
     
     print('Quadrants Assigned')
+    
+    #Assign PLC code to Module
+    Module_1 = ['C05']  + ['SCS0' + str(i) for i in range(1,6)]
+    Module_2 = ['C0' + str(i) for i in range(8,10)] + ['SCSM0' + str(i) for i in range(7,10)] + ['SCSM11']
+    Module_3 = ['C'  + str(i) for i in range(10,13)] + ['SCSM' + str(i) for i in range(11,16)]
+    Module_4 = ['C'  + str(i) for i in range(13,15)] + ['SCSM' + str(i) for i in range(17,21)]
+
+
+    #Assign faults to Quadrants  
+    Module = []
+
+    for i in range(len(fa)):
+        
+        if fa['PLC'][i] in ['C05','SCSM01']:
+            if fa['Desk'][i] != 'Z':
+                Module.append('1')
+            else:
+                Module.append('C05 External')
+                
+        elif fa['PLC'][i] in ['C06','SCSM02','SCSM03']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM02':
+                Module.append('2')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM03':
+                Module.append('3') 
+            else:
+                Module.append('C06 External')
+                
+        elif fa['PLC'][i] in ['C07','SCSM04','SCSM05']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM04':
+                Module.append('4')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM05':
+                Module.append('5') 
+            else:
+                Module.append('C07 External')
+                
+        elif fa['PLC'][i] in ['C08','SCSM07','SCSM08']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM07':
+                Module.append('7')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM08':
+                Module.append('8') 
+            else:
+                Module.append('C08 External')
+                
+        elif fa['PLC'][i] in ['C09','SCSM09','SCSM10']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM09':
+                Module.append('9')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM10':
+                Module.append('10') 
+            else:
+                Module.append('C09 External')
+                
+        elif fa['PLC'][i] in ['C10','SCSM11']:
+            if fa['Desk'][i] != 'Z':
+                Module.append('11')
+            else:
+                Module.append('C10 External')
+                
+        elif fa['PLC'][i] in ['C11','SCSM12','SCSM13']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM12':
+                Module.append('12')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM13':
+                Module.append('13') 
+            else:
+                Module.append('C11 External')
+                
+        elif fa['PLC'][i] in ['C12','SCSM14','SCSM15']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM14':
+                Module.append('14')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM15':
+                Module.append('15') 
+            else:
+                Module.append('C12 External')
+                
+        elif fa['PLC'][i] in ['C13','SCSM17','SCSM18']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM17':
+                Module.append('17')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM18':
+                Module.append('18') 
+            else:
+                Module.append('C13 External')
+                
+        elif fa['PLC'][i] in ['C14','SCSM19','SCSM20']:
+            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM19':
+                Module.append('19')
+            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM20':
+                Module.append('20') 
+            else:
+                Module.append('C14 External')       
+           
+                
+        elif fa['PLC'][i] in ['C' + str(i) for i in range(35,54)]:       
+            Module.append('Destacker')
+                
+        elif fa['PLC'][i] in ['C17','SCSM22']:
+            Module.append('ECB')     
+                
+        elif fa['PLC'][i] in ['C15','C16','C23']:
+            Module.append('Outer Loop')
+        else:
+            Module.append('PLC code not from SCS')
+                
+    fa['Module']=Module
+    
+    #Assign availability to Modules  
     
     av['Module'] = av['Pick Station'].str[3].astype(int)*10 + av['Pick Station'].str[4].astype(int)
     
@@ -105,7 +209,7 @@ def floor_time(df,time_col,floor_units = 'H',shift=0, shift_units='m'):
     
     #Shifts entry time by desired amount
     
-    df[time_col] = df[time_col].apply(lambda x:x-pd.to_timedelta(shift,unit=shift_units))
+    df[time_col] = df[time_col].apply(lambda x:x+pd.to_timedelta(shift,unit=shift_units))
     
     print('Time shifted by ' + str(shift) +shift_units)
     
