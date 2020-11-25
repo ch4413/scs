@@ -89,11 +89,29 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     return(dfs)
     
     
-def floor_time(df,time_col,units = 'H'):
-    ''' function that floors datetime column in a pandas df to the specific time unit
-    Note: defaults to HOUR'''
-    df[time_col] = df[time_col].dt.floor(units)
-    print("Dates floored")
+def floor_time(df,time_col,floor_units = 'H',shift=0, shift_units='m'):
+    ''' function that shifts and floors datetime column in a pandas df to the specific time unit
+    Note: defaults to HOUR
+    
+    Parameters:
+    
+    df: input dataframe
+    time_col: column name with fault entry time
+    floor_units: units to floor on (Default Hour)
+    shift: units to shift time by (No shift by default)
+    shift_units: units to shift by (minutes by default)
+    
+    '''
+    
+    #Shifts entry time by desired amount
+    
+    df[time_col] = df[time_col].apply(lambda x:x-pd.to_timedelta(shift,unit=shift_units))
+    
+    print('Time shifted by ' + str(shift) +shift_units)
+    
+    #floors units to round down to the nearest specified time interval (Hour by default)
+    
+    df[time_col] = df[time_col].dt.floor(floor_units)
     return(df)
 
 
@@ -170,7 +188,7 @@ def availability_quadrant_mean(df,time_col, level = None, selection = None):
     print('Availability data aggregated')
     return(df)
 
-def weight_hours(df,weights = [1,0.5,0.2]):
+def weight_hours(df,weights = [1]):
     
     '''function to include weighted fault data from previous hours
     
@@ -181,13 +199,21 @@ def weight_hours(df,weights = [1,0.5,0.2]):
     
     '''
     
-    df_weight = pd.DataFrame(data=np.zeros((len(df)-len(weights)+1,len(df.columns))),index=df.index[len(weights)-1:],columns = df.columns)
+    #set up new data frame to fill
     
-    for i in range(len(weights)-1,len(df)):
+    df_weight = pd.DataFrame(data=np.zeros(df.shape),index=df.index,columns = df.columns)
+    
+    #iterate to fill each row with weighted fault data
+    
+    for i in range(len(df)):
+        
+        #iterate through each row in orginal df required in row of new df
         
         for x in range(len(weights)):
+            
+            if i-x >= 0:
          
-            df_weight.iloc[i-len(weights)+1] = df_weight.iloc[i-len(weights)+1] + df.iloc[i-x]*weights[x]
+                df_weight.iloc[i] = df_weight.iloc[i] + df.iloc[i-x]*weights[x]
 
     print('Previous Hours Weighted')
     return(df_weight)
