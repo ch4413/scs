@@ -2,7 +2,7 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
                                   remove_same_location_faults = True):
     '''function that pre-processes the raw csv files:
     1. converts date columns to datetime objects,
-    2. assigns quandrants by PLC location, 
+    2. assigns quandrants and modules, 
     3. drops rows with missing values, 
     4. drops faults that happen in same location at same time (keeps fault with max duration) - if selected 
     
@@ -60,11 +60,13 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
             Quad.append(3)
         elif i in Quad_4:
             Quad.append(4)
-        else:
-            Quad.append(0)
     av['Quadrant'] = Quad
     
     print('Quadrants Assigned')
+    
+    av['Module'] = av['Pick Station'].str[3].astype(int)*10 + av['Pick Station'].str[4].astype(int)
+    
+    print('Modules Assigned')
     
     fa['Entry time'] = pd.to_datetime(fa['Entry time'],dayfirst=True)
     av['Datetime'] = pd.to_datetime(av['Datetime'],dayfirst=True)
@@ -87,11 +89,29 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     return(dfs)
     
     
-def floor_time(df,time_col,units = 'H'):
-    ''' function that floors datetime column in a pandas df to the specific time unit
-    Note: defaults to HOUR'''
-    df[time_col] = df[time_col].dt.floor(units)
-    print("Dates floored")
+def floor_time(df,time_col,floor_units = 'H',shift=0, shift_units='m'):
+    ''' function that shifts and floors datetime column in a pandas df to the specific time unit
+    Note: defaults to HOUR
+    
+    Parameters:
+    
+    df: input dataframe
+    time_col: column name with fault entry time
+    floor_units: units to floor on (Default Hour)
+    shift: units to shift time by (No shift by default)
+    shift_units: units to shift by (minutes by default)
+    
+    '''
+    
+    #Shifts entry time by desired amount
+    
+    df[time_col] = df[time_col].apply(lambda x:x-pd.to_timedelta(shift,unit=shift_units))
+    
+    print('Time shifted by ' + str(shift) +shift_units)
+    
+    #floors units to round down to the nearest specified time interval (Hour by default)
+    
+    df[time_col] = df[time_col].dt.floor(floor_units)
     return(df)
 
 
@@ -128,18 +148,75 @@ def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_du
     return(df)
 
 
-def availability_quadrant_mean(df,time_col,quadrant=None):
-    '''function to aggregate availability at the quadrant level'''
+def availability_quadrant_mean(df,time_col, level = None, selection = None):
+    '''function to aggregate availability at chosen level:
     
-    if quadrant != None:
-        print("Output will contain data only for Quadrant:" + str(quadrant))
-        df = df[df['Quadrant'].isin([quadrant, 0])] 
+    1. Selects availability data revelevent to chosen level
+    2. Aggregates Availability Data
+    
+    Parameters:
+    
+    df: input dataframe
+    time_col: column name containing time
+    level: which level to aggregate at (i.e. Quadrant/Module/Pick Station)
+    selected: selected area within that level (i.e. Quadrant 1/Module 1/PPT011)
+    
+    '''
+    
+    if level != None:
+        print("Output will contain data only for " + str(level) + ": " + str(selection))
+        
+        if level == 'Quadrant':
+        
+            df = df[df['Quadrant']==selection]
+            
+        elif level == 'Module':
+        
+            df = df[df['Module']==selection]
+        
+        elif level == 'Pick Station':
+            
+            df = df[df['Pick Station']==selection]
+        
+        else:
+            
+            print('\nNot a valid level, aggregating from all data\n')
+    
     df = df.groupby([time_col],as_index=False).agg('mean')
-    df = df.drop(['Quadrant'],axis=1)
+    df = df.drop(['Quadrant','Module'],axis=1)
     df = df.set_index(time_col)
-    print('Availability data aggregated by quadrant')
+    print('Availability data aggregated')
     return(df)
 
+def weight_hours(df,weights = [1]):
+    
+    '''function to include weighted fault data from previous hours
+    
+    Parameters:
+    
+    df: input data frame
+    weights: weights for hours with first element in array being weight for current hour, second the previous hour etc.
+    
+    '''
+    
+    #set up new data frame to fill
+    
+    df_weight = pd.DataFrame(data=np.zeros(df.shape),index=df.index,columns = df.columns)
+    
+    #iterate to fill each row with weighted fault data
+    
+    for i in range(len(df)):
+        
+        #iterate through each row in orginal df required in row of new df
+        
+        for x in range(len(weights)):
+            
+            if i-x >= 0:
+         
+                df_weight.iloc[i] = df_weight.iloc[i] + df.iloc[i-x]*weights[x]
+
+    print('Previous Hours Weighted')
+    return(df_weight)
 
 def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
     '''function that merges availability and fault datasets by date index'''
@@ -157,28 +234,30 @@ def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
     print('Availability and fault datasets merged')
     return(df)
 
-def run_model(df, random_state = None, num_trees=100, criterion = 'mse',max_depth=None, dtree=True,select=True,visualise=False):
+def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion = 'mse',max_depth=None, dtree=True,select='mean',cv=False, visualise=False):
     
     '''function that runs ML models based off chosen features and selected target variable:
     
     1. performs test train split,
     2. runs decision tree model (if required), 
     3. outputs decision tree visulation (if required),
-    4. runs random forest model
-    5. outputs residual distrubution, scatter plot and feature importance
-    6. runs selected random forest model (if required)
+    4. runs random forest model or linear model
+    5. outputs residual distrubution, scatter plot and feature importance/coefficient
+    6. runs selected model (if required)
     7. outputs regression metrics from model(s) 
     
     Parameters:
     
     df: input data frame containing features and target variable
+    modeltype: Linear or random forest model (RF by default)
     num_trees: number of tree for random forrest model (100 by default)
     dtree: option for running decision tree model (True by default)
     select: option for running selected random forest model (True by default)
     visualise: option for outputing decision tree visualisation (False by default)
     criterion: type of criterion used, either 'mse' or 'mae' ('mse' by default)
-    max_depth: maximum depth of the tree (None by defaiult)
-    random_state: ensures same split for comparison of results for different models (None by defaiult)
+    max_depth: maximum depth of the tree (None by default)
+    random_state: ensures same split for comparison of results for different models (None by default)
+    cv: to run cross validation on model, number indicated number of folds (False by default)
     
     
     Note: preprocessing functions must be run prior to this function to ensure dataframe is formatted correctly
@@ -198,112 +277,154 @@ def run_model(df, random_state = None, num_trees=100, criterion = 'mse',max_dept
     y = df['Downtime']
     
     #train_test_split
-    
+   
     from sklearn.model_selection import train_test_split
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=random_state)
     
     #Set up metrics dataframe
     
-    fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
+    if modeltype == 'RF':
+    
+        fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
+    
+    if modeltype == 'LM':
+        
+        fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','R2_Train','R2_Pred'])
     
     #import metrics
     
     from sklearn import metrics
     
-    if dtree==True:
-    
-        #Fit decision Tree
+    if modeltype == 'RF':
 
-        from sklearn.tree import DecisionTreeRegressor
+        if dtree==True:
 
-        dtree = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
-        dtree.fit(X_train,y_train)
+            #Fit decision Tree
 
-        #Predicting using decision tree
+            from sklearn.tree import DecisionTreeRegressor
 
-        dtree_pred = dtree.predict(X_test)
+            dtree_model = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
+            dtree_model.fit(X_train,y_train)
 
-        #Fill dataframe with metrics
+            #Predicting using decision tree
 
-        mape = np.mean(np.abs((y_test - dtree_pred) / np.abs(y_test)))
+            dtree_pred = dtree_model.predict(X_test)
 
-        fit_metrics['D_Tree'] = [metrics.mean_absolute_error(y_test, dtree_pred),metrics.mean_squared_error(y_test, dtree_pred),
-                                np.sqrt(metrics.mean_squared_error(y_test, dtree_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
-                                'N/A',dtree.score(X_train,y_train),dtree.score(X_test,y_test)]
-    
-    #Tree visulisation
-    
-    if visualise == True:
-    
-        from IPython.display import Image  
-        from six import StringIO  
-        from sklearn.tree import export_graphviz
-        import pydot 
+            #Fill dataframe with metrics
 
-        features = list(df.columns[2:])
-    
-        dot_data = StringIO()  
-        export_graphviz(dtree, out_file=dot_data,feature_names=features,filled=True,rounded=True)
+            mape = np.mean(np.abs((y_test - dtree_pred) / np.abs(y_test)))
 
-        graph = pydot.graph_from_dot_data(dot_data.getvalue())  
-        Image(graph[0].create_png())  
-    
-    #Fit Random Forest
+            fit_metrics['D_Tree'] = [metrics.mean_absolute_error(y_test, dtree_pred),metrics.mean_squared_error(y_test, dtree_pred),
+                                    np.sqrt(metrics.mean_squared_error(y_test, dtree_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
+                                    'N/A',dtree_model.score(X_train,y_train),dtree_model.score(X_test,y_test)]
 
-    from sklearn.ensemble import RandomForestRegressor
+            #Tree visulisation
 
-    rfr = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
-    rfr.fit(X_train, y_train)
-    
+            if visualise == True:
+
+                from IPython.display import Image  
+                from six import StringIO  
+                from sklearn.tree import export_graphviz
+                import pydot 
+
+                features = list(df.columns[2:])
+
+                dot_data = StringIO()  
+                export_graphviz(dtree_model, out_file=dot_data,feature_names=features,filled=True,rounded=True)
+
+                graph = pydot.graph_from_dot_data(dot_data.getvalue())  
+                Image(graph[0].create_png())  
+
+        #Fit Model
+        
+    if modeltype == 'RF':
+
+        from sklearn.ensemble import RandomForestRegressor
+        model = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
+
+    if modeltype == 'LM':    
+
+        from sklearn.linear_model import LinearRegression
+        model = LinearRegression()
+
+    model.fit(X_train, y_train)
+
     #Predicting using random forest
-    
-    rf_pred = rfr.predict(X_test)
-    
+
+    pred = model.predict(X_test)
+
     #Fill dataframe with metrics
-    
-    mape = np.mean(np.abs((y_test - rf_pred) / np.abs(y_test)))
-    
-    fit_metrics['RF'] = [metrics.mean_absolute_error(y_test, rf_pred),metrics.mean_squared_error(y_test, rf_pred),
-                            np.sqrt(metrics.mean_squared_error(y_test, rf_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
-                            rfr.oob_score_,rfr.score(X_train,y_train),rfr.score(X_test,y_test)]
-    
+
+    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
+
+    if modeltype == 'RF':
+
+        fit_metrics[str(modeltype)] = [metrics.mean_absolute_error(y_test, pred),metrics.mean_squared_error(y_test, pred),
+                                np.sqrt(metrics.mean_squared_error(y_test, pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
+                                model.oob_score_,model.score(X_train,y_train),model.score(X_test,y_test)]
+
+    if modeltype == 'LM':
+
+        fit_metrics[str(modeltype)] = [metrics.mean_absolute_error(y_test, pred),metrics.mean_squared_error(y_test, pred),
+                            np.sqrt(metrics.mean_squared_error(y_test, pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
+                            model.score(X_train,y_train),model.score(X_test,y_test)]
+
     #Output Test Scatter and Distribution
-    
-    plt.scatter(y_test,rf_pred)
+
+    plt.scatter(y_test,pred)
     plt.xlabel('Actual Downtime')
     plt.ylabel('Predicted Downtime')
-    plt.title('Predicted vs Actual Scatter from RF Test')
-    
+    plt.title('Predicted vs Actual Scatter from Test')
+
     plt.figure()
-    sns.distplot(y_test-rf_pred)
-    plt.title('Distrubution of Residuals from RF Test')
+    sns.distplot(y_test-pred)
+    plt.title('Distrubution of Residuals from Test')
     plt.xlabel('Residual')
-    
-     #Output Train Scatter and Distribution
-    
+
+    #Output Train Scatter and Distribution
+
     plt.figure()
-    plt.scatter(y_train,rfr.predict(X_train))
+    plt.scatter(y_train,model.predict(X_train))
     plt.xlabel('Actual Downtime')
     plt.ylabel('Predicted Downtime')
-    plt.title('Predicted vs Actual Scatter from RF Train')
-    
+    plt.title('Predicted vs Actual Scatter from Train')
+
     plt.figure()
-    sns.distplot(y_train-rfr.predict(X_train))
-    plt.title('Distrubution of Residuals from RF Train')
+    sns.distplot(y_train-model.predict(X_train))
+    plt.title('Distrubution of Residuals from Train')
     plt.xlabel('Residual')
-    
-    #Output Feature Importance
-    
-    Importance = pd.DataFrame({'Importance': rfr.feature_importances_,'Feature':X.columns}).sort_values(by='Importance', ascending=False)
-    Importance = Importance.reset_index()
-    Importance = Importance.drop('index',axis=1)
-    plt.figure(figsize=(20,5))
-    sns.barplot(data = Importance, x= 'Feature', y='Importance',order=Importance[:10].sort_values('Importance',ascending=False).Feature)
-    plt.xlabel('Feature')
-    print(Importance.head(10))
-    
-    if select == True:
+
+
+    if modeltype == 'RF':
+
+        #Output Feature Importance
+
+        Importance = pd.DataFrame({'Importance': model.feature_importances_,
+                                   'Feature':X.columns}).sort_values(by='Importance', ascending=False)
+        Importance = Importance.reset_index()
+        Importance = Importance.drop('index',axis=1)
+        plt.figure(figsize=(20,5))
+        sns.barplot(data = Importance, x= 'Feature', y='Importance',
+                    order=Importance[:10].sort_values('Importance',ascending=False).Feature)
+        plt.xlabel('Feature')
+        print('Feature Importance Ranking: \n \n',Importance.head(10))
+
+    if modeltype == 'LM':
+
+        #Output model coefficients
+
+        Coeff = pd.DataFrame({'Coefficients': model.coef_,
+                                   'Feature':X.columns}).sort_values(by='Coefficients')
+        Coeff = Coeff.reset_index()
+        Coeff = Coeff.drop('index',axis=1)
+        plt.figure(figsize=(20,5))
+        sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',
+                    order=Coeff[:10].sort_values('Coefficients').Feature)
+        plt.xlabel('Feature')
+        print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
+            
+    if select != False:
     
         #Reducing Demensionality
 
@@ -311,12 +432,14 @@ def run_model(df, random_state = None, num_trees=100, criterion = 'mse',max_dept
 
         from sklearn.feature_selection import SelectFromModel
 
-        sel = SelectFromModel(RandomForestRegressor(n_estimators = num_trees,criterion = criterion,max_depth=max_depth))
+        sel = SelectFromModel(model,threshold=select)
         sel.fit(X_train, y_train)
-
+        
         #Set selected features
 
         selected_feat= X_train.columns[(sel.get_support())]
+        
+        print('\nNumber of Selected Features:' + str(len(selected_feat)))
 
         #Reduce number of features
 
@@ -328,23 +451,58 @@ def run_model(df, random_state = None, num_trees=100, criterion = 'mse',max_dept
 
         #Fit reduced model
 
-        rfr_sel = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score=True)
-        rfr_sel.fit(X_train,y_train)
+        model.fit(X_train,y_train)
 
         #Predicting using random forest
 
-        rf_sel_pred = rfr_sel.predict(X_test)
+        sel_pred = model.predict(X_test)
 
         #Fill dataframe with metrics
 
-        mape = np.mean(np.abs((y_test - rf_sel_pred) / np.abs(y_test)))
+        mape = np.mean(np.abs((y_test - sel_pred) / np.abs(y_test)))
+                  
+        if modeltype == 'RF':
 
-        fit_metrics['RF Reduced'] = [metrics.mean_absolute_error(y_test, rf_sel_pred),metrics.mean_squared_error(y_test, rf_sel_pred),
-                                np.sqrt(metrics.mean_squared_error(y_test, rf_sel_pred)),round(mape * 100, 2),round(100*(1 - mape), 2),
-                                rfr_sel.oob_score_,rfr_sel.score(X_train,y_train),rfr_sel.score(X_test,y_test)]
-    
+            fit_metrics[str(modeltype) + ' Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
+                                                   metrics.mean_squared_error(y_test, sel_pred),
+                                                   np.sqrt(metrics.mean_squared_error(y_test, sel_pred)),
+                                                   round(mape * 100, 2),round(100*(1 - mape), 2),
+                                                   model.oob_score_,
+                                                   model.score(X_train,y_train),
+                                                   model.score(X_test,y_test)]
+                  
+        if modeltype == 'LM':
+                  
+            fit_metrics[str(modeltype) + ' Reduced'] = [metrics.mean_absolute_error(y_test, sel_pred),
+                                                   metrics.mean_squared_error(y_test, sel_pred),
+                                                   np.sqrt(metrics.mean_squared_error(y_test, sel_pred)),
+                                                   round(mape * 100, 2),round(100*(1 - mape), 2),
+                                                   model.score(X_train,y_train),
+                                                   model.score(X_test,y_test)]
+        
     #print metrics
     
-    print('\n', fit_metrics)
+    print('\nRegression Metrics: \n \n', fit_metrics)
+    
+    #cross validation
+    
+    if cv != False:
+        
+        df_cross_val = pd.DataFrame(index = [str(i) for i in range(1,cv+1)]+['Mean','STD'])
+        
+        from sklearn.model_selection import cross_val_score
+        
+        if (dtree == True) and (modeltype == 'RF'):          
+                  
+            scores = cross_val_score(dtree_model, X, y, cv=cv)
+            df_cross_val['D_Tree R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
+        
+        scores = cross_val_score(model, X, y, cv=cv)
+        df_cross_val[str(modeltype) + ' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
+        
+        scores = cross_val_score(model, X_sel, y, cv=cv)
+        df_cross_val[str(modeltype) + ' Reduced R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
+        
+        print('\nCross Validation Scores: \n \n', df_cross_val)
 
 print("Functions Loaded!")
