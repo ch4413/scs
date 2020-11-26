@@ -1,6 +1,9 @@
+import pandas as pd
+
 def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
                                   remove_same_location_faults = True):
-    '''function that pre-processes the raw csv files:
+    '''
+    function that pre-processes the raw csv files:
     1. converts date columns to datetime objects,
     2. assigns quandrants and modules, 
     3. drops rows with missing values, 
@@ -194,7 +197,8 @@ def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
     
     
 def floor_time(df,time_col,floor_units = 'H',shift=0, shift_units='m'):
-    ''' function that shifts and floors datetime column in a pandas df to the specific time unit
+    '''
+    function that shifts and floors datetime column in a pandas df to the specific time unit
     Note: defaults to HOUR
     
     Parameters:
@@ -220,7 +224,8 @@ def floor_time(df,time_col,floor_units = 'H',shift=0, shift_units='m'):
 
 
 def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_durations = False, quadrant=None):
-    '''function that aggregates fault data by specified metric (agg_type) and quadrant.
+    '''
+    function that aggregates fault data by specified metric (agg_type) and quadrant.
     - The quadrant parameter is used in case you want to filter for a specifc quadrant
     (e.g., if you only want observations from quadrant 1)
     - agg type is count/mean/sum
@@ -253,7 +258,8 @@ def faults_aggregate_and_pivot(df,time_col,fault_level,agg_col,agg_type,break_du
 
 
 def availability_quadrant_mean(df,time_col, level = None, selection = None):
-    '''function to aggregate availability at chosen level:
+    '''
+    function to aggregate availability at chosen level:
     
     1. Selects availability data revelevent to chosen level
     2. Aggregates Availability Data
@@ -293,8 +299,8 @@ def availability_quadrant_mean(df,time_col, level = None, selection = None):
     return(df)
 
 def weight_hours(df,weights = [1]):
-    
-    '''function to include weighted fault data from previous hours
+    '''
+    function to include weighted fault data from previous hours
     
     Parameters:
     
@@ -323,7 +329,9 @@ def weight_hours(df,weights = [1]):
     return(df_weight)
 
 def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
-    '''function that merges availability and fault datasets by date index'''
+    '''
+    function that merges availability and fault datasets by date index
+    '''
     if min_date is None:
         min_date = av_df.index.min()
     if max_date is None:
@@ -339,8 +347,8 @@ def merge_av_fa(av_df,fa_df,min_date=None,max_date=None):
     return(df)
 
 def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion = 'mse',max_depth=None, dtree=True,select='mean',cv=False, visualise=False):
-    
-    '''function that runs ML models based off chosen features and selected target variable:
+    '''
+    function that runs ML models based off chosen features and selected target variable:
     
     1. performs test train split,
     2. runs decision tree model (if required), 
@@ -609,4 +617,4 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
         
         print('\nCross Validation Scores: \n \n', df_cross_val)
 
-print("Functions Loaded!")
+#print("Functions Loaded!")
