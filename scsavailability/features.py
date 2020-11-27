@@ -3,6 +3,7 @@ All features work
 """
 
 import pandas as pd
+import numpy as np
 
 def create_totes_features(totes_data):
 
@@ -13,7 +14,6 @@ def create_scs_features(scs_data):
 
     return None
 
-import pandas as pd
 
 def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
                                   remove_same_location_faults = True):
@@ -306,7 +306,7 @@ def availability_quadrant_mean(df,time_col, level = None, selection = None):
     print('Availability data aggregated')
     return(df)
 
-def weight_hours(df,weights = [1]):
+def weight_hours(df, weights = [1,0.5,0.25]):
     '''
     function to include weighted fault data from previous hours
     
@@ -314,14 +314,9 @@ def weight_hours(df,weights = [1]):
     
     df: input data frame
     weights: weights for hours with first element in array being weight for current hour, second the previous hour etc.
-    
     '''
     
-    #set up new data frame to fill
-    
-    df_weight = pd.DataFrame(data=np.zeros(df.shape),index=df.index,columns = df.columns)
-    
-    #iterate to fill each row with weighted fault data
+    df_weight = pd.DataFrame(data = np.zeros(df.shape),index=df.index,columns = df.columns)
     
     for i in range(len(df)):
         
