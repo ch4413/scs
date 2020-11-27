@@ -5,6 +5,7 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
 
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def gen_feat_var(df)
+def gen_feat_var(df):
     
     """
     Summary
@@ -108,10 +109,12 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     
     model: sklearn model object
         fitted RF model
+    pred: pandas Series
+        model predictions for plotting
     
     Example
     --------
-    RF_mdl=run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
+    RF_mdl,predictions=run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
     
     """
 
@@ -167,15 +170,16 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     
     #Output feature importance
     
-    Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X.columns}).sort_values(by='Importance', ascending=False)
+    Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X_train.columns}).sort_values(by='Importance', ascending=False)
     Importance = Importance.reset_index()
     Importance = Importance.drop('index',axis=1)
     plt.figure(figsize=(20,5))
     sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[:10].sort_values('Importance',ascending=False).Feature)
     plt.xlabel('Feature')
     print('Feature Importance Ranking: \n \n',Importance.head(10))
-
-    return model
+    print('\nRegression Metrics: \n \n', fit_metrics,'\n')
+    
+    return model,pred
 
 def run_LR_model(X_train, X_test, y_train, y_test):
     
@@ -198,10 +202,12 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     model: sklearn model object
         fitted linear regression model
+    pred: pandas Series
+        model predictions for plotting    
     
     Example
     --------
-    Linear_mdl=run_LR_model(X_train, X_test, y_train, y_test):
+    Linear_mdl,predictions=run_LR_model(X_train, X_test, y_train, y_test):
     
     """
     
@@ -233,15 +239,16 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     #Output model coefficients
 
-    Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X.columns}).sort_values(by='Coefficients')
+    Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X_train.columns}).sort_values(by='Coefficients')
     Coeff = Coeff.reset_index()
     Coeff = Coeff.drop('index',axis=1)
     plt.figure(figsize=(20,5))
     sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',order=Coeff[:10].sort_values('Coefficients').Feature)
     plt.xlabel('Feature')
     print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
+    print('\nRegression Metrics: \n \n', fit_metrics)
     
-    return model
+    return model,pred
 
 def select_features(X, X_train, y_train, model, thres = None):
     
@@ -284,7 +291,7 @@ def select_features(X, X_train, y_train, model, thres = None):
 
     selected_feat= X_train.columns[(sel.get_support())]
 
-    print('\nNumber of Selected Features:' + str(len(selected_feat)))
+    print('\nNumber of Selected Features:' + str(len(selected_feat)) ,'\n')
 
     #Reduce number of features
 
@@ -325,17 +332,17 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     
     """
 
-    df_cross_val = pd.DataFrame(index = [str(i) for i in range(1,folds+1)]+['Mean','STD'])       
+    df_cross_val = pd.DataFrame(index = [str(i) for i in range(1,n_folds+1)]+['Mean','STD'])       
      
     folds = KFold(n_splits = n_folds, shuffle = shuffle, random_state = random_state)
-    scores = cross_val_score(model, X, Y, scoring='r2', cv=folds)    
+    scores = cross_val_score(model, X, y, scoring='r2', cv=folds)    
     df_cross_val[' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
     print('\nCross Validation Scores: \n \n', df_cross_val)
     
     return scores.mean()
 
---------------------------------------------------------------------------------------------------------------------------------------    
+'-------------------------------------------------------------------------------------------------------------------------------------- '   
     
 def fit_n_r2(X, Y, model_type, **kwargs):
     """
@@ -359,11 +366,11 @@ def fit_n_r2(X, Y, model_type, **kwargs):
         list of r2 values from cross-validation
     Example
     --------
-    model, r2_scores = fit_n_r2((X, Y, LinearRegression))
+    model, r2_scores = fit_n_r2((X, y, LinearRegression))
     """
     model = model_type(**kwargs)
     folds = KFold(n_splits = 5, shuffle = True, random_state = 100)
-    scores = cross_val_score(model, X, Y, scoring='r2', cv=folds)
+    scores = cross_val_score(model, X, y, scoring='r2', cv=folds)
 
     return model, scores
 
