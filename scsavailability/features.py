@@ -16,7 +16,7 @@ def create_scs_features(scs_data):
 import pandas as pd
 
 def pre_process_av_and_fa_oct_nov(av,fa_oct,fa_nov,
-                                  remove_same_location_faults = True):
+                                    remove_same_location_faults = True):
     '''
     function that pre-processes the raw csv files:
     1. converts date columns to datetime objects,

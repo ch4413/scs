@@ -202,7 +202,7 @@ def run_model(df, modeltype = 'RF',random_state = None, num_trees=100, criterion
         
     #print metrics
     
-    print('\nRegression Metrics: \n \n', fit_metrics)
+    #print('\nRegression Metrics: \n \n', fit_metrics)
     
     #cross validation
     
