@@ -31,6 +31,7 @@ def plot_graphs(model, X_train, y_train, y_test, pred):
     """
     #Output Test Scatter and Distribution
 
+    plt.figure()
     plt.scatter(y_test,pred)
     plt.xlabel('Actual Downtime')
     plt.ylabel('Predicted Downtime')
