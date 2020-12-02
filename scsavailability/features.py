@@ -34,9 +34,9 @@ def pre_process_AT(active_totes):
     
     #Active Totes to Quadrants
     Quad_1 = [int(i) for i in range(1,6)]
-    Quad_2 = [range(7,11)]
-    Quad_3 = [range(11,16)]
-    Quad_4 = [range(17,21)]
+    Quad_2 = [int(i) for i in range(7,11)]
+    Quad_3 = [int(i) for i in range(11,16)]
+    Quad_4 = [int(i) for i in range(17,21)]
 
     #Assign faults to Quadrants  
     Quad = []
