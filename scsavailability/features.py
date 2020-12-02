@@ -448,7 +448,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
     if agg_level == None:
     
         av_df = pd.DataFrame(av_df[~av_df[target].isnull()][target]).loc[min_date:max_date]
-    
+
         if faults == True and totes == False:
 
             df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
@@ -461,8 +461,9 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
 
             df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
             df = df.merge(at_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
-     
-    
+
+        df.reset_index(inplace=True)
+
     if agg_level != None:
         
         av_df = pd.DataFrame(av_df[~av_df[target].isnull()][[target,agg_level]]).loc[min_date:max_date]
