@@ -36,8 +36,8 @@ def gen_feat_var(df):
     
     #define target variable and features
     
-    X = df.drop(['Datetime','Downtime'],axis=1)
-    y = df['Downtime']
+    X = df[df.columns[2:]]
+    y = df[df.columns[1]]
     
     return X,y
     
@@ -338,7 +338,7 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     scores = cross_val_score(model, X, y, scoring='r2', cv=folds)    
     df_cross_val[' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
-    print('\nCross Validation Scores: \n \n', df_cross_val)
+    print('\nCross Validation Scores ' + str(model) + ': \n \n', df_cross_val)
     
     return scores.mean()
 
