@@ -326,7 +326,7 @@ def faults_aggregate(df,fault_agg_level , agg_col = 'Duration',agg_type = 'count
     print('Faults aggregated')
     return(df)
 
-def av_at_select(av, at, select_level, selection):
+def av_at_select(av, at, select_level =None, selection = None, remove_high_AT = False):
 
     av = av.copy()
     at = at.copy()
@@ -348,6 +348,29 @@ def av_at_select(av, at, select_level, selection):
             
             print('\nNot a valid level, returned all data\n')
             
+    if remove_high_AT == True:
+        
+        at_piv = pd.pivot_table(at,values = 'TOTES',index = 'timestamp', columns = 'Module')
+        at_lookup = at.groupby('Module').mean().drop('Quadrant',axis=1)
+        
+        Limit = []
+
+        for i in at_piv.columns: 
+
+            Q1 = at_piv[i].quantile(0.25)
+            Q3 = at_piv[i].quantile(0.75)
+            Limit.append(Q3 + 1.5 * (Q3-Q1))
+            
+        at_lookup['Upper limit'] = Limit
+            
+        at_lookup.drop('TOTES',axis=1,inplace=True)
+        
+        at = at.join(at_lookup,how='inner',on='Module')
+        
+        at = at[at['TOTES']<=at['Upper limit']]
+    
+        at.drop('Upper limit',axis=1,inplace=True)
+                
     return av,at            
 
 
