@@ -36,8 +36,8 @@ def gen_feat_var(df):
     
     #define target variable and features
     
-    X = df.drop(['Datetime','Downtime'],axis=1)
-    y = df['Downtime']
+    X = df[df.columns[2:]]
+    y = df[df.columns[1]]
     
     return X,y
     
@@ -250,7 +250,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     return model,pred
 
-def select_features(X, X_train, y_train, model, thres = None):
+def select_features(X, X_train, y_train, model, thres = None, max_feat = None):
     
     """
     Summary
@@ -280,11 +280,15 @@ def select_features(X, X_train, y_train, model, thres = None):
     
     """
     
+    X = X.copy()
+    X_train = X_train.copy()
+    y_train = y_train.copy()
+    
     #Reducing Demensionality
 
     #Fit select model
 
-    sel = SelectFromModel(model,threshold=thres)
+    sel = SelectFromModel(model,threshold=thres,max_features= max_feat)
     sel.fit(X_train, y_train)
 
     #Set selected features
@@ -338,7 +342,7 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     scores = cross_val_score(model, X, y, scoring='r2', cv=folds)    
     df_cross_val[' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
-    print('\nCross Validation Scores: \n \n', df_cross_val)
+    print('\nCross Validation Scores ' + str(model) + ': \n \n', df_cross_val)
     
     return scores.mean()
 
