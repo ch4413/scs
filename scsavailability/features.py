@@ -4,6 +4,7 @@ All features work
 
 import pandas as pd
 import numpy as np
+from . import logger
 
 def create_totes_features(totes_data):
 
@@ -14,7 +15,7 @@ def create_scs_features(scs_data):
 
     return None
 
-
+@logger.logger
 def pre_process_AT(active_totes):
     
     active_totes = active_totes[~active_totes['MODULE_ASSIGNED'].isin(['ECB', 'RCB'])].copy()
@@ -55,11 +56,11 @@ def pre_process_AT(active_totes):
             
     active_totes['Quadrant']=Quad
     
-    print('Active Totes Preprocessed')
+#    print('Active Totes Preprocessed')
         
     return active_totes
 
-
+@logger.logger
 def pre_process_av(av):
     '''
     function that pre-processes the raw csv files:
@@ -96,19 +97,20 @@ def pre_process_av(av):
             Quad.append(4)
     av['Quadrant'] = Quad
     
-    print('Quadrants Assigned')
+    #print('Quadrants Assigned')
 
     #Assign availability to Modules  
     
     av['Module'] = av['Pick Station'].str[3].astype(int)*10 + av['Pick Station'].str[4].astype(int)
     
-    print('Modules Assigned')
+    #print('Modules Assigned')
     
     av['timestamp'] = pd.to_datetime(av['timestamp'],dayfirst=True)
     
-    print("Availability data pre-processed")
+    #print("Availability data pre-processed")
     return(av)
-    
+
+@logger.logger
 def preprocess_faults(fa,remove_same_location_faults = True):
     
     fa.columns = pd.Series(fa.columns).str.strip()
@@ -246,7 +248,7 @@ def preprocess_faults(fa,remove_same_location_faults = True):
         fa = fa.sort_values('Duration').drop_duplicates(subset=['timestamp', 'PLC', 'Desk'],keep='last')
         print('duplicated location faults removed - max duration kept')
         
-    print('Faults Preprocessed')
+    #print('Faults Preprocessed')
     
     return(fa)
 
@@ -287,7 +289,7 @@ def fault_select(fa, select_level, selection):
     
     return fa
     
-    
+@logger.logger
 def faults_aggregate(df,fault_agg_level , agg_col = 'Duration',agg_type = 'count' ,time_col = 'timestamp',break_durations = False):
     '''
     function that aggregates fault data by specified metric (agg_type) and quadrant.
@@ -323,7 +325,7 @@ def faults_aggregate(df,fault_agg_level , agg_col = 'Duration',agg_type = 'count
             df = df.groupby([time_col,fault_agg_level],as_index = False).agg({agg_col:agg_type})
             df = pd.pivot_table(df,values = agg_col,index = time_col,columns = fault_agg_level,fill_value=0)
    
-    print('Faults aggregated')
+    #print('Faults aggregated')
     return(df)
 
 def av_at_select(av, at, select_level =None, selection = None, remove_high_AT = False):
@@ -373,7 +375,7 @@ def av_at_select(av, at, select_level =None, selection = None, remove_high_AT = 
                 
     return av,at            
 
-
+@logger.logger
 def aggregate_availability(df, agg_level = None):
     '''
     function to aggregate availability at chosen level:
@@ -398,7 +400,7 @@ def aggregate_availability(df, agg_level = None):
         df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Downtime':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
         
     df = df.set_index('timestamp')
-    print('Availability data aggregated')
+#    print('Availability data aggregated')
     return(df)
 
 def aggregate_totes(active_totes, agg_level = None):
@@ -514,3 +516,4 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
     df = df.loc[:, (df != 0).any(axis=0)]
     print('Datasets merged')
     return(df)
+    

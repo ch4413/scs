@@ -1,0 +1,9 @@
+path:
+    totes: data/active_totes_20201123.csv
+    availability: data/Availability_with_Grey&Blue_1811-2511.csv
+    faults: data/scs_tote_matched.csv
+
+settings:
+    aggregation: Module
+    fault_level: code
+    target: "Blue Tote Loss"
