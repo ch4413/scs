@@ -173,9 +173,12 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X_train.columns}).sort_values(by='Importance', ascending=False)
     Importance = Importance.reset_index()
     Importance = Importance.drop('index',axis=1)
+
     #plt.figure(figsize=(20,5))
-    #sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[:10].sort_values('Importance',ascending=False).Feature)
-    #plt.xlabel('Feature')
+    #sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[1:11].sort_values('Importance',ascending=False).Feature,color='b')
+    #plt.xlabel('Asset',fontsize=18)
+    #plt.xticks(fontsize=18)
+
     print('Feature Importance Ranking: \n \n',Importance.head(10))
     print('\nRegression Metrics: \n \n', fit_metrics,'\n')
     
@@ -242,9 +245,12 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X_train.columns}).sort_values(by='Coefficients')
     Coeff = Coeff.reset_index()
     Coeff = Coeff.drop('index',axis=1)
-    # plt.figure(figsize=(20,5))
-    # sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',order=Coeff[:10].sort_values('Coefficients').Feature)
-    # plt.xlabel('Feature')
+
+    #plt.figure(figsize=(20,5))
+    #sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',order=Coeff[:10].sort_values('Coefficients').Feature,color='b')
+    #plt.xlabel('Feature',fontsize=18)
+    #plt.xticks(fontsize=18)
+    
     print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
     print('\nRegression Metrics: \n \n', fit_metrics)
     
