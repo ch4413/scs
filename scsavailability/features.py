@@ -282,10 +282,11 @@ def floor_shift_time_fa(df,time_col = 'timestamp',floor_units = 'H',shift=0, shi
     return(df)
 
 
-def fault_select(fa, select_level, selection):
+def fault_select(fa, select_level, selection,duration_thres = 0):
     
     fa = fa.copy()
     fa = fa[fa[select_level].isin(selection)] 
+    fa = fa[fa['Duration']>duration_thres]
     
     return fa
     
