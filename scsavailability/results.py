@@ -35,4 +35,3 @@ def create_output(config, fit_metrics, Coeff, cv_R2):
     print('Saved results: ' + filename)
     return None
     
-
