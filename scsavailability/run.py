@@ -11,7 +11,7 @@ import re
 import yaml
 
 import scsavailability as scs
-from scsavailability import features as feat, model as md, plotting as pt
+from scsavailability import features as feat, model as md, plotting as pt, results as rt
 
 def parse_config(path=None, data=None, tag='!ENV'):
     """
@@ -103,8 +103,9 @@ def run(config):
     X_train, X_test, y_train, y_test = md.split(X,y,test_size=0.3,random_state=101)
 
     # Model
-    Linear_mdl, predictions_LM =md.run_LR_model(X_train, X_test, y_train, y_test)
-    cv_R2 = md.cross_validate_r2(Linear_mdl, X, y, n_folds = 10, shuffle = True, random_state = 101)
+    Linear_mdl, predictions_LM, Coeff, fit_metrics =md.run_LR_model(X_train, X_test, y_train, y_test)
+    cv_R2, df_cv = md.cross_validate_r2(Linear_mdl, X, y, n_folds = 10, shuffle = True, random_state = 101)
+    rt.create_output(config, fit_metrics, Coeff, df_cv)
 
 if __name__ == '__main__':
     print('running with config')

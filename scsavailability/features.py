@@ -5,6 +5,7 @@ All features work
 import pandas as pd
 import numpy as np
 from . import logger
+import pkg_resources
 
 def create_totes_features(totes_data):
 
@@ -14,6 +15,22 @@ def create_totes_features(totes_data):
 def create_scs_features(scs_data):
 
     return None
+
+@logger.logger
+def load_module_lookup():
+    """Return a dataframe about the 68 different Roman Emperors.
+
+    Contains the following fields:
+        index          68 non-null int64
+        name           68 non-null object
+        name.full      68 non-null object
+    ... (docstring truncated) ...
+
+    """
+    # This is a stream-like object. If you want the actual info, call
+    # stream.read()
+    stream = pkg_resources.resource_stream(__name__, 'data/module_lookup.csv')
+    return pd.read_csv(stream)
 
 @logger.logger
 def pre_process_AT(active_totes):
@@ -34,29 +51,14 @@ def pre_process_AT(active_totes):
     active_totes.rename(columns = {'MODULE_ASSIGNED':'Module'},inplace = True) 
     
     #Active Totes to Quadrants
-    Quad_1 = [int(i) for i in range(1,6)]
-    Quad_2 = [int(i) for i in range(7,11)]
-    Quad_3 = [int(i) for i in range(11,16)]
-    Quad_4 = [int(i) for i in range(17,21)]
-
-    #Assign faults to Quadrants  
-    Quad = []
-
-    for i in active_totes['Module']:
-        if i in Quad_1:
-            Quad.append(1)
-        elif i in Quad_2:
-            Quad.append(2)
-        elif i in Quad_3:
-            Quad.append(3)
-        elif i in Quad_4:
-            Quad.append(4)
-        else:
-            Quad.append(0)
-            
-    active_totes['Quadrant']=Quad
-    
-#    print('Active Totes Preprocessed')
+    active_totes['Quadrant'] = 0
+    active_totes.loc[active_totes['Module'] < 6, 'Quadrant'] = 1
+    active_totes.loc[(active_totes['Module'] > 6)
+        & (active_totes['Module'] < 11), 'Quadrant'] = 2
+    active_totes.loc[(active_totes['Module'] > 10)
+        & (active_totes['Module'] < 16), 'Quadrant'] = 3
+    active_totes.loc[(active_totes['Module'] > 16)
+        & (active_totes['Module'] < 21), 'Quadrant'] = 4
         
     return active_totes
 
@@ -94,7 +96,7 @@ def pre_process_av(av):
         elif i in Quad_3:
             Quad.append(3)
         elif i in Quad_4:
-            Quad.append(4)
+            Quad.append(4)  
     av['Quadrant'] = Quad
     
     #print('Quadrants Assigned')
@@ -138,102 +140,19 @@ def preprocess_faults(fa,remove_same_location_faults = True):
         else:
             Quad.append(0)
     fa['Quadrant']=Quad
-    
-    #Assign faults to Quadrants  
-    Module = []
 
-    for i in range(len(fa)):
-        
-        if fa['PLC'][i] in ['C05','SCSM01']:
-            if fa['Desk'][i] != 'Z':
-                Module.append('1')
-            else:
-                Module.append('C05 External')
-                
-        elif fa['PLC'][i] in ['C06','SCSM02','SCSM03']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM02':
-                Module.append('2')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM03':
-                Module.append('3') 
-            else:
-                Module.append('C06 External')
-                
-        elif fa['PLC'][i] in ['C07','SCSM04','SCSM05']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM04':
-                Module.append('4')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM05':
-                Module.append('5') 
-            else:
-                Module.append('C07 External')
-                
-        elif fa['PLC'][i] in ['C08','SCSM07','SCSM08']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM07':
-                Module.append('7')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM08':
-                Module.append('8') 
-            else:
-                Module.append('C08 External')
-                
-        elif fa['PLC'][i] in ['C09','SCSM09','SCSM10']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM09':
-                Module.append('9')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM10':
-                Module.append('10') 
-            else:
-                Module.append('C09 External')
-                
-        elif fa['PLC'][i] in ['C10','SCSM11']:
-            if fa['Desk'][i] != 'Z':
-                Module.append('11')
-            else:
-                Module.append('C10 External')
-                
-        elif fa['PLC'][i] in ['C11','SCSM12','SCSM13']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM12':
-                Module.append('12')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM13':
-                Module.append('13') 
-            else:
-                Module.append('C11 External')
-                
-        elif fa['PLC'][i] in ['C12','SCSM14','SCSM15']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM14':
-                Module.append('14')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM15':
-                Module.append('15') 
-            else:
-                Module.append('C12 External')
-                
-        elif fa['PLC'][i] in ['C13','SCSM17','SCSM18']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM17':
-                Module.append('17')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM18':
-                Module.append('18') 
-            else:
-                Module.append('C13 External')
-                
-        elif fa['PLC'][i] in ['C14','SCSM19','SCSM20']:
-            if fa['Desk'][i] in ['P01','P02'] or fa['PLC'][i] == 'SCSM19':
-                Module.append('19')
-            elif fa['Desk'][i] in ['P03','P04'] or fa['PLC'][i] == 'SCSM20':
-                Module.append('20') 
-            else:
-                Module.append('C14 External')       
-           
-                
-        elif fa['PLC'][i] in ['C' + str(i) for i in range(35,54)]:       
-            Module.append('Destacker')
-                
-        elif fa['PLC'][i] in ['C17','SCSM22']:
-            Module.append('ECB')     
-                
-        elif fa['PLC'][i] in ['C15','C16','C23']:
-            Module.append('Outer Loop')
-        else:
-            Module.append('PLC code not from SCS')
-                
-    fa['Module']=Module
-    
+    lu = load_module_lookup()
+    # Copy desk
+    fa['Desk_edit'] = fa['Desk']
+    # Mark SCSs
+    fa.loc[fa['PLC'].str.contains('SCS'), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains('SCS'), 'PLC']
+    # Mark PTTs
+    #fa.loc[fa['Alert'].str.contains('PTT'), 'Desk_edit'] = 'PTT'
+    # Set NA desk for outside stuff
+    fa.loc[fa['PLC'].isin(['C23', 'C16', 'C15', 'C17']), 'Desk_edit'] = 'X'
+    fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
+    fa.loc[fa['PLCN'] > 34, 'Desk_edit'] = 'X'
+    fa = pd.merge(fa, lu, how='left', on=['PLC', 'Desk_edit']).drop('Desk_edit', axis=1)
     fa['timestamp'] = pd.to_datetime(fa['timestamp'],dayfirst=True)
     
     #drop rows where there is no duration data
@@ -514,7 +433,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
         df.drop([agg_level],axis=1,inplace=True)
 
     #remove columns with only zeros (faults that did not happen in this period of time or quadrant)
-    
+
     if remove_0 == True:
         
         df = df.loc[:, (df != 0).any(axis=0)]
