@@ -1,9 +1,9 @@
 path:
-    totes: data/active_totes_20201123.csv
-    availability: data/Availability_with_Grey&Blue_1811-2511.csv
-    faults: data/scs_tote_matched.csv
+    totes: C:\Users\Jamie.williams\OneDrive - Newton Europe Ltd\Castle Donnington\Data\active_totes_20201123.csv
+    availability: C:\Users\Jamie.williams\OneDrive - Newton Europe Ltd\Castle Donnington\Data\Availability_with_Grey&Blue_1811-2511.csv
+    faults: C:\Users\Jamie.williams\OneDrive - Newton Europe Ltd\Castle Donnington\Data\scs_tote_matched.csv
 
 settings:
-    aggregation: Quadrant
+    aggregation: Module
     fault_level: "Tote Colour"
-    target: "Blue Tote Loss"
+    target: "Downtime"

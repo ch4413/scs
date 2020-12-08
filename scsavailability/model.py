@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
+from xgboost import XGBRegressor
 
 import pandas as pd
 import numpy as np
@@ -184,6 +185,88 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     
     return model,pred
 
+def run_XGB_model(X_train, X_test, y_train, y_test,num_trees=None, max_depth=None):
+    
+    """
+    Summary
+    -------
+    Runs random forest model and decision tree if chosen and outputs regression metrics and feature importance
+    ----------
+    X_train: pandas DataFrame
+        dataframe of training features
+    X_test: pandas Series
+        dataframe of test features
+    y_train: pandas Series
+        series of training target variables
+    y_test: pandas Series
+        series of test target variables    
+    num_trees: integer
+        number of trees to use in RF model
+    criterion: string 'mse'/'mae'
+        criterion use to split nodes
+    max_depth: integer
+        maximum depth of trees
+    dtree: boolean
+        generate decision tree option
+    
+    Returns
+    -------
+    
+    model: sklearn model object
+        fitted RF model
+    pred: pandas Series
+        model predictions for plotting
+    
+    Example
+    --------
+    RF_mdl,predictions=run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
+    
+    """
+
+    #set up metrics dataframe
+    
+    fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
+
+        
+    model = XGBRegressor(num_trees=None, max_depth=None)
+    
+    model.fit(X_train, y_train)
+
+    #Predicting using random forest
+
+    pred = model.predict(X_test)
+
+    #Fill dataframe with metrics
+
+    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
+
+  
+
+    fit_metrics['XGB Metrics'] = [metrics.mean_absolute_error(y_test, pred),
+                                 metrics.mean_squared_error(y_test, pred),
+                                 np.sqrt(metrics.mean_squared_error(y_test, pred)),
+                                 round(mape * 100, 2),round(100*(1 - mape), 2),
+                                 'N/A' ,model.score(X_train,y_train),
+                                 model.score(X_test,y_test)]
+    
+    #Output feature importance
+    
+    Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X_train.columns}).sort_values(by='Importance', ascending=False)
+    Importance = Importance.reset_index()
+    Importance = Importance.drop('index',axis=1)
+
+    #plt.figure(figsize=(20,5))
+    #sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[1:11].sort_values('Importance',ascending=False).Feature,color='b')
+    #plt.xlabel('Asset',fontsize=18)
+    #plt.xticks(fontsize=18)
+
+    print('Feature Importance Ranking: \n \n',Importance.head(10))
+    print('\nRegression Metrics: \n \n', fit_metrics,'\n')
+    
+    return model,pred,Importance
+
+
+
 def run_LR_model(X_train, X_test, y_train, y_test):
     
     """
@@ -242,7 +325,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     #Output model coefficients
 
-    Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X_train.columns}).sort_values(by='Coefficients')
+    Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X_train.columns}).sort_values(by='Coefficients',ascending=False)
     Coeff = Coeff.reset_index()
     Coeff = Coeff.drop('index',axis=1)
 
@@ -254,9 +337,9 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
     print('\nRegression Metrics: \n \n', fit_metrics)
     
-    return model,pred
+    return model,pred, Coeff
 
-def select_features(X, X_train, y_train, model, thres = None, max_feat = None):
+def select_features(X, y, model, thres = None, max_feat = None):
     
     """
     Summary
@@ -287,19 +370,17 @@ def select_features(X, X_train, y_train, model, thres = None, max_feat = None):
     """
     
     X = X.copy()
-    X_train = X_train.copy()
-    y_train = y_train.copy()
+    y = y.copy()
     
     #Reducing Demensionality
 
     #Fit select model
 
-    sel = SelectFromModel(model,threshold=thres,max_features= max_feat)
-    sel.fit(X_train, y_train)
+    sel = SelectFromModel(estimator = model,threshold=thres,max_features= max_feat).fit(X,y)
 
     #Set selected features
 
-    selected_feat= X_train.columns[(sel.get_support())]
+    selected_feat = X.columns[(sel.get_support())]
 
     print('\nNumber of Selected Features:' + str(len(selected_feat)) ,'\n')
 

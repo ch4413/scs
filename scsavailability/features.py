@@ -282,10 +282,11 @@ def floor_shift_time_fa(df,time_col = 'timestamp',floor_units = 'H',shift=0, shi
     return(df)
 
 
-def fault_select(fa, select_level, selection):
+def fault_select(fa, select_level, selection,duration_thres = 0):
     
     fa = fa.copy()
     fa = fa[fa[select_level].isin(selection)] 
+    fa = fa[fa['Duration']>duration_thres]
     
     return fa
     
@@ -454,7 +455,7 @@ def weight_hours(df, weights = [1,0.5,0.25]):
     print('Previous Hours Weighted')
     return(df_weight)
 
-def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, target = 'Downtime',faults=True, totes = True,agg_level=None):
+def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, target = 'Downtime',faults=True, totes = True,agg_level=None,remove_0 = True):
     '''
     function that merges availability and fault datasets by date index
     '''
@@ -513,7 +514,10 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
         df.drop([agg_level],axis=1,inplace=True)
 
     #remove columns with only zeros (faults that did not happen in this period of time or quadrant)
-    df = df.loc[:, (df != 0).any(axis=0)]
+    
+    if remove_0 == True:
+        
+        df = df.loc[:, (df != 0).any(axis=0)]
     print('Datasets merged')
     return(df)
     
