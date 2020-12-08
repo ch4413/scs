@@ -334,10 +334,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     #plt.xlabel('Feature',fontsize=18)
     #plt.xticks(fontsize=18)
     
-    print('Feature Coefficient Ranking: \n \n',Coeff.head(10))
-    print('\nRegression Metrics: \n \n', fit_metrics)
-    
-    return model,pred, Coeff
+    return model, pred, Coeff, fit_metrics
 
 def select_features(X, y, model, thres = None, max_feat = None):
     
@@ -431,7 +428,7 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
         
     print('\nCross Validation Scores ' + str(model) + ': \n \n', df_cross_val)
     
-    return scores.mean()
+    return scores.mean(), df_cross_val
 
 '-------------------------------------------------------------------------------------------------------------------------------------- '   
     

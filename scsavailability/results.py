@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 
-def create_results_table():
+def create_output(config, fit_metrics, Coeff, cv_R2):
     """
     Summary
     -------
@@ -20,9 +20,19 @@ def create_results_table():
     --------
     df_nielsen_clean = process_model_data(df_nielsen)
     """
+    today = datetime.now()
+    d1 = today.strftime("%Y%m%d%H%M%S")
+    filename = "{0}_{1}.xlsx".format(config.path.save, d1)
 
-    df_results = pd.DataFrame()
+    writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+    df1 = pd.DataFrame(config.toDict())
+    df1.to_excel(writer, sheet_name='Sheet1', index=False)
+    fit_metrics.to_excel(writer, sheet_name='Sheet2', index=False)
+    Coeff.to_excel(writer, sheet_name='Sheet3', index=False)
+    cv_R2.to_excel(writer, sheet_name='Sheet4', index=False)
 
-    return df_results
+    writer.save()
+    print('Saved results: ' + filename)
+    return None
     
 
