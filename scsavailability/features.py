@@ -455,7 +455,7 @@ def weight_hours(df, weights = [1,0.5,0.25]):
     print('Previous Hours Weighted')
     return(df_weight)
 
-def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, target = 'Downtime',faults=True, totes = True,agg_level=None):
+def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, target = 'Downtime',faults=True, totes = True,agg_level=None,remove_0 = True):
     '''
     function that merges availability and fault datasets by date index
     '''
@@ -514,7 +514,10 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
         df.drop([agg_level],axis=1,inplace=True)
 
     #remove columns with only zeros (faults that did not happen in this period of time or quadrant)
-    df = df.loc[:, (df != 0).any(axis=0)]
+    
+    if remove_0 == True:
+        
+        df = df.loc[:, (df != 0).any(axis=0)]
     print('Datasets merged')
     return(df)
     
