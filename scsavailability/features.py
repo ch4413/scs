@@ -172,7 +172,7 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     return(fa)
 
 
-def floor_shift_time_fa(df,time_col = 'timestamp',floor_units = 'H',shift=0, shift_units='m'):
+def floor_shift_time_fa(df,shift=0):
     '''
     function that shifts and floors datetime column in a pandas df to the specific time unit
     Note: defaults to HOUR
@@ -191,26 +191,32 @@ def floor_shift_time_fa(df,time_col = 'timestamp',floor_units = 'H',shift=0, shi
     
     #Shifts entry time by desired amount
     
-    df[time_col] = df[time_col].apply(lambda x:x+pd.to_timedelta(shift,unit=shift_units))
+    df['timestamp'] = df['timestamp'].apply(lambda x:x+pd.to_timedelta(shift,unit='m'))
     
-    print('Time shifted by ' + str(shift) + shift_units)
+    print('Time shifted by ' + str(shift) + 'Minutes')
     
     #floors units to round down to the nearest specified time interval (Hour by default)
     
-    df[time_col] = df[time_col].dt.floor(floor_units)
+    df['timestamp'] = df['timestamp'].dt.floor('H')
     return(df)
 
 
-def fault_select(fa, select_level, selection,duration_thres = 0):
+def fault_select(fa, fault_select_options=None,duration_thres = 0):
     
     fa = fa.copy()
-    fa = fa[fa[select_level].isin(selection)] 
+    
+    if fault_selection_options != None:
+       
+        for i in fault_selection_options.keys:
+    
+            fa = fa[fa[i].isin(fault_selection_options[i])] 
+
     fa = fa[fa['Duration']>duration_thres]
     
     return fa
     
 @logger.logger
-def faults_aggregate(df,fault_agg_level , agg_col = 'Duration',agg_type = 'count' ,time_col = 'timestamp',break_durations = False):
+def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
     '''
     function that aggregates fault data by specified metric (agg_type) and quadrant.
     - The quadrant parameter is used in case you want to filter for a specifc quadrant
@@ -224,51 +230,43 @@ def faults_aggregate(df,fault_agg_level , agg_col = 'Duration',agg_type = 'count
     df = df.copy()
     
  
-    if break_durations == True:
-        df['Duration_category'] = df.groupby(fault_level)["Duration"].apply(lambda x: pd.cut(x, 3,labels=['short','medium','long']))
-        cols = [fault_level,'Duration_category']
-        df['period'] = df[cols].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        df = df.groupby([time_col,'Quadrant','period'],as_index = False).agg({agg_col:agg_type})
-        if quadrant != None:
-            df = df[df['Quadrant'].isin([quadrant, 0])]
-        df = pd.pivot_table(df,values = agg_col,index = time_col,columns = ['period'],fill_value=0)
-        print('Duration broken into categories Short, Medium, Long')
+  
+    if fault_agg_level == None:
+
+        df = df.groupby('timestamp',as_index = False).agg({'Duration':agg_type})
+        df.rename(columns = {'Duration':'Total Faults'},inplace = True)
+        df = df.set_index('timestamp')
+
     else:
-        if fault_agg_level == None:
-            
-            df = df.groupby(time_col,as_index = False).agg({agg_col:agg_type})
-            df.rename(columns = {'Duration':'Total Faults'},inplace = True)
-            df = df.set_index('timestamp')
-            
-        if fault_agg_level != None:
-    
-            df = df.groupby([time_col,fault_agg_level],as_index = False).agg({agg_col:agg_type})
-            df = pd.pivot_table(df,values = agg_col,index = time_col,columns = fault_agg_level,fill_value=0)
+
+        df = df.groupby(['timestamp',fault_agg_level],as_index = False).agg({'Duration':agg_type})
+        df = pd.pivot_table(df,values = 'Duration',index = 'timestamp',columns = fault_agg_level,fill_value=0)
    
     #print('Faults aggregated')
     return(df)
 
-def av_at_select(av, at, select_level =None, selection = None, remove_high_AT = False):
+def av_at_select(av, at, availability_selection_options = None,remove_high_AT = True):
 
     av = av.copy()
     at = at.copy()
     
-    if select_level != None:
-        print("Availability and Totes will contain data only for " + str(select_level) + ": " + str(selection))
-        
-        if select_level == 'Pick Station':
-            
-            av = av[av['Pick Station']==selection]
-        
-        
-        elif select_level == 'Module' or select_level == 'Quadrant':
-                
-            av = av[av[select_level]==selection]
-            at = at[at[select_level]==selection]
-            
-        else:
-            
-            print('\nNot a valid level, returned all data\n')
+    if availability_selection_options != None:
+       
+        for i in availability_selection_options.keys:
+    
+            if i == 'Pick Station':
+
+                av = av[av['Pick Station']==selection]
+
+
+            elif i == 'Module' or i == 'Quadrant':
+
+                av = av[av[i].isin(availability_selection_options[i])]
+                at = at[at[i].isin(availability_selection_options[i])]
+
+            else:
+
+                print('\nNot a valid level, returned all data\n')
             
     if remove_high_AT == True:
         
