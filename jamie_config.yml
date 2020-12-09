@@ -3,7 +3,37 @@ path:
     availability: C:\Users\Jamie.williams\OneDrive - Newton Europe Ltd\Castle Donnington\Data\Availability_with_Grey&Blue_1811-2511.csv
     faults: C:\Users\Jamie.williams\OneDrive - Newton Europe Ltd\Castle Donnington\Data\scs_tote_matched.csv
 
-settings:
-    aggregation: Module
-    fault_level: "Tote Colour"
-    target: "Downtime"
+
+features:
+	same_location_fault: True
+	
+	shift: 0
+
+	fault_select_options: {'Tote_Colour' : ['Blue', 'Both'], 'Module' : [1, 2, 3]}
+	duration_thres: 1
+
+	fault_grouping: "code"
+	agg_type: 'count'
+	
+	availability_select_options: {'Quadrant' : [0,1,2]}
+	remove_high_AT: True
+
+	aggregation: None
+	
+	weights: [1,0.5,0.25]
+
+	min_date: None
+	max_date: None	
+
+
+model:
+
+	target: "Downtime"
+	features: ['Totes','Faults']
+
+	split: {'test_size': 0.3,'random_state': None}
+	RF_parameters: {'num_trees': 100, 'criterion': 'mse', 'max_depth': None, 'dtree': False}
+
+        XGB_parameters: {'num_trees': 100,'max_depth': None}
+
+	Selection_parameters: {'thres': 'mean', 'max_feat': None}
