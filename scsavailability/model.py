@@ -44,7 +44,8 @@ def gen_feat_var(df):
     return X,y
     
     
-def split(X,y,test_size=None,random_state=None):
+def split(X,y,split_options = {'test_size':0.3,
+                               'random_state':None}):
     
     """
     Summary
@@ -77,12 +78,15 @@ def split(X,y,test_size=None,random_state=None):
     """
     
     #train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=split_options['test_size'], random_state=split_options['random_state'])
     
     return X_train, X_test, y_train, y_test
 
     
-def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
+def run_RF_model(X_train, X_test, y_train, y_test,RF_options = {'num_trees': 100, 
+                                                                'criterion':'mse', 
+                                                                'max_depth':None, 
+                                                                'dtree':False}):
     
     """
     Summary
@@ -124,11 +128,11 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     
     fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
 
-    if dtree==True:
+    if RF_options['dtree']==True:
 
             #Fit decision Tree
 
-            dtree_model = DecisionTreeRegressor(criterion = criterion, max_depth=max_depth)
+            dtree_model = DecisionTreeRegressor(criterion = RF_options['criterion'], max_depth= RF_options['max_depth'])
             dtree_model.fit(X_train,y_train)
 
             #Predicting using decision tree
@@ -149,7 +153,10 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
 
     #Fit Model
         
-    model = RandomForestRegressor(n_estimators=num_trees,criterion = criterion,max_depth=max_depth,oob_score = True)
+    model = RandomForestRegressor(n_estimators=RF_options['num_trees'], 
+                                  criterion = RF_options['criterion'], 
+                                  max_depth=RF_options['max_depth'],
+                                  oob_score = True)
     
     model.fit(X_train, y_train)
 
@@ -186,7 +193,8 @@ def run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'ms
     
     return model,pred
 
-def run_XGB_model(X_train, X_test, y_train, y_test,num_trees=None, max_depth=None):
+def run_XGB_model(X_train, X_test, y_train, y_test,XGB_options = {'num_trees': 100, 
+                                                                'max_depth':None}):
     
     """
     Summary
@@ -229,7 +237,7 @@ def run_XGB_model(X_train, X_test, y_train, y_test,num_trees=None, max_depth=Non
     fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
 
         
-    model = XGBRegressor(num_trees=None, max_depth=None)
+    model = XGBRegressor(n_estimators=XGB_options['num_trees'], max_depth=XGB_options['max_depth'])
     
     model.fit(X_train, y_train)
 
@@ -337,7 +345,8 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     return model, pred, Coeff, fit_metrics
 
-def select_features(X, y, model, thres = None, max_feat = None):
+def select_features(X, y, model, selection_options = {'thres': 'mean', 
+                                                      'max_feat': None}):
     
     """
     Summary
@@ -374,7 +383,7 @@ def select_features(X, y, model, thres = None, max_feat = None):
 
     #Fit select model
 
-    sel = SelectFromModel(estimator = model,threshold=thres,max_features= max_feat).fit(X,y)
+    sel = SelectFromModel(estimator = model,threshold = selection_options['thres'], max_features = selection_options['max_feat']).fit(X,y)
 
     #Set selected features
 
@@ -388,7 +397,7 @@ def select_features(X, y, model, thres = None, max_feat = None):
     
     return X_sel
 
-def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = None):
+def cross_validate_r2(model, X, y, n_folds=10, shuffle = True, random_state = None):
     
     """
     Summary
