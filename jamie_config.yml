@@ -31,9 +31,9 @@ model:
 	target: "Downtime"
 	features: ['Totes','Faults']
 
-	split: {'test_size': 0.3,'random_state': None}
-	RF_parameters: {'num_trees': 100, 'criterion': 'mse', 'max_depth': None, 'dtree': False}
+	split_options: {'test_size': 0.3,'random_state': None}
+	RF_options: {'num_trees': 100, 'criterion': 'mse', 'max_depth': None, 'dtree': False}
 
-        XGB_parameters: {'num_trees': 100,'max_depth': None}
+        XGB_options: {'num_trees': 100,'max_depth': None}
 
-	Selection_parameters: {'thres': 'mean', 'max_feat': None}
+	selection_options: {'thres': 'mean', 'max_feat': None}
