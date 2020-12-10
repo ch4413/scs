@@ -205,11 +205,11 @@ def fault_select(fa, fault_select_options=None,duration_thres = 0):
     
     fa = fa.copy()
     
-    if fault_selection_options != None:
+    if fault_select_options != None:
        
-        for i in fault_selection_options.keys:
+        for i in fault_select_options.keys():
     
-            fa = fa[fa[i].isin(fault_selection_options[i])] 
+            fa = fa[fa[i].isin(fault_select_options[i])] 
 
     fa = fa[fa['Duration']>duration_thres]
     
@@ -228,8 +228,6 @@ def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
     '''
     
     df = df.copy()
-    
- 
   
     if fault_agg_level == None:
 
@@ -245,24 +243,24 @@ def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
     #print('Faults aggregated')
     return(df)
 
-def av_at_select(av, at, availability_selection_options = None,remove_high_AT = True):
+def av_at_select(av, at, availability_select_options = None,remove_high_AT = True):
 
     av = av.copy()
     at = at.copy()
     
-    if availability_selection_options != None:
+    if availability_select_options != None:
        
-        for i in availability_selection_options.keys:
+        for i in availability_select_options.keys():
     
             if i == 'Pick Station':
 
-                av = av[av['Pick Station']==selection]
+                av = av[av[i].isin(availability_select_options[i])]
 
 
             elif i == 'Module' or i == 'Quadrant':
 
-                av = av[av[i].isin(availability_selection_options[i])]
-                at = at[at[i].isin(availability_selection_options[i])]
+                av = av[av[i].isin(availability_select_options[i])]
+                at = at[at[i].isin(availability_select_options[i])]
 
             else:
 
