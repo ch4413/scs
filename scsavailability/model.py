@@ -15,7 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def gen_feat_var(df):
+def gen_feat_var(df,target = "Downtime"):
     
     """
     Summary
@@ -38,8 +38,10 @@ def gen_feat_var(df):
     
     #define target variable and features
     
-    X = df[df.columns[2:]]
-    y = df[df.columns[1]]
+    df = df[~df[target].isnull()]
+    
+    X = df[df.columns[4:]]
+    y = df[target]
     
     return X,y
     

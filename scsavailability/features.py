@@ -61,7 +61,7 @@ def pre_process_AT(active_totes):
     active_totes['HOUR'] = active_totes['HOUR'].astype('str').str.pad(width=2, side='left', fillchar='0')
     active_totes['MINUTE'] = active_totes['MINUTE'].astype('str').str.pad(width=2, side='left', fillchar='0')
     active_totes['timestamp'] = pd.to_datetime(active_totes.apply(
-    lambda x: '{0}/{1}/{2} {3}:{4}'.format(x['MONTH'],x['DAY'], x['YEAR'], x['HOUR'], x['MINUTE']), axis=1),dayfirst=True)
+    lambda x: '{0}/{1}/{2} {3}:{4}'.format(x['DAY'],x['MONTH'], x['YEAR'], x['HOUR'], x['MINUTE']), axis=1),dayfirst=True)
     
     active_totes = active_totes.drop(['DAY','MONTH','YEAR','HOUR','MINUTE','ID'],axis=1)
     active_totes.rename(columns = {'MODULE_ASSIGNED':'Module'},inplace = True) 
@@ -386,7 +386,7 @@ def weight_hours(df, weights = [1,0.5,0.25]):
     print('Previous Hours Weighted')
     return(df_weight)
 
-def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, target = 'Downtime',faults=True, totes = True,agg_level=None,remove_0 = True):
+def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,faults=True, totes = True,agg_level=None,remove_0 = True):
     '''
     function that merges availability and fault datasets by date index
     '''
@@ -404,7 +404,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
         
     if agg_level == None:
     
-        av_df = pd.DataFrame(av_df[~av_df[target].isnull()][target]).loc[min_date:max_date]
+        av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
 
         if faults == True and totes == False:
 
@@ -423,7 +423,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
 
     if agg_level != None:
         
-        av_df = pd.DataFrame(av_df[~av_df[target].isnull()][[target,agg_level]]).loc[min_date:max_date]
+        av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss", agg_level]].loc[min_date:max_date]
         
         av_df.reset_index(inplace=True)
         at_df.reset_index(inplace=True)
@@ -470,10 +470,10 @@ def add_code(data):
     scs = add_code(data)
     """
     scs = data.copy()
-    scs['code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
-    scs['code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
+    scs['Asset Code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
+    scs['Asset Code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
     
-    scs.loc[scs['code'].isna(), 'code'] = scs.loc[scs['code'].isna(), 'PLC']
+    scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
     
     #scs['Pick Station'] = scs['Alert'].str.extract('(PTT[0-9]{3})')[0]
     return scs
@@ -498,7 +498,7 @@ def add_tote_colour(scs_code):
     scs, unmapped = add_tote_colour(data)
     """
     asset_lu = load_tote_lookup()
-    df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='code')
+    df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='Asset Code')
     df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
     df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
     df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
@@ -506,8 +506,8 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['PLC_number'] > 34, 'Tote Colour'] = 'Blue'
     
     # Unmapped
-    unmapped = df_totes[df_totes['Tote Colour'].isna()]['code'].value_counts().reset_index().copy()
-    unmapped = unmapped.rename(columns={'index' : 'Asset', 'code' : 'Occurrence'})
+    unmapped = df_totes[df_totes['Tote Colour'].isna()]['Asset Code'].value_counts().reset_index().copy()
+    unmapped = unmapped.rename(columns={'index' : 'Asset', 'Asset Code' : 'Occurrence'})
     # Map unknown to Both
     df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
 
