@@ -33,6 +33,22 @@ def load_module_lookup():
     return pd.read_csv(stream)
 
 @logger.logger
+def load_tote_lookup():
+    """Return a dataframe about the 68 different Roman Emperors.
+
+    Contains the following fields:
+        index          68 non-null int64
+        name           68 non-null object
+        name.full      68 non-null object
+    ... (docstring truncated) ...
+
+    """
+    # This is a stream-like object. If you want the actual info, call
+    # stream.read()
+    stream = pkg_resources.resource_stream(__name__, 'data/tote_lookup.csv')
+    return pd.read_csv(stream)
+
+@logger.logger
 def pre_process_AT(active_totes):
     
     active_totes = active_totes[~active_totes['MODULE_ASSIGNED'].isin(['ECB', 'RCB'])].copy()
@@ -436,3 +452,63 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None, targ
     print('Datasets merged')
     return(df)
     
+def add_code(data):
+    """
+    Summary
+    -------
+    Takes variables and fits model with arguments. Return model object.
+    Parameters
+    ----------
+    data: pandas DataFrame
+        dataframe of features
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs = add_code(data)
+    """
+    scs = data.copy()
+    scs['code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
+    scs['code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
+    
+    scs.loc[scs['code'].isna(), 'code'] = scs.loc[scs['code'].isna(), 'PLC']
+    
+    #scs['Pick Station'] = scs['Alert'].str.extract('(PTT[0-9]{3})')[0]
+    return scs
+
+def add_tote_colour(scs_code):
+    """
+    Summary
+    -------
+    Takes variables and fits model with arguments. Return model object.
+    Parameters
+    ----------
+    scs_code: pandas DataFrame
+        dataframe of features
+    asset_lu: pandas DataFrame
+        dataframe
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs, unmapped = add_tote_colour(data)
+    """
+    asset_lu = load_tote_lookup()
+    df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='code')
+    df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
+    df_totes['Pick Station'] = df_totes['Alert'].str.contains('PTT[0-9]{3}')
+    df_totes.loc[df_totes['Pick Station'], 'Tote Colour'] = 'Both'
+    df_totes['PLC_number'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
+    df_totes.loc[df_totes['PLC_number'] > 34, 'Tote Colour'] = 'Blue'
+    
+    # Unmapped
+    unmapped = df_totes[df_totes['Tote Colour'].isna()]['code'].value_counts().reset_index().copy()
+    unmapped = unmapped.rename(columns={'index' : 'Asset', 'code' : 'Occurrence'})
+    # Map unknown to Both
+    df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
+
+    return df_totes, unmapped
