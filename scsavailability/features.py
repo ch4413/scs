@@ -163,7 +163,7 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     # Mark SCSs
     fa.loc[fa['PLC'].str.contains('SCS'), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains('SCS'), 'PLC']
     # Mark PTTs
-    #fa.loc[fa['Alert'].str.contains('PTT'), 'Desk_edit'] = 'PTT'
+    fa.loc[~(fa['Pick Station']==False), 'Desk_edit'] = fa[~(fa['Pick Station']==False)]['Pick Station'].apply(lambda x: x[:-1])
     # Set NA desk for outside stuff
     fa.loc[fa['PLC'].isin(['C23', 'C16', 'C15', 'C17']), 'Desk_edit'] = 'X'
     fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
@@ -500,8 +500,8 @@ def add_tote_colour(scs_code):
     asset_lu = load_tote_lookup()
     df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='code')
     df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
-    df_totes['Pick Station'] = df_totes['Alert'].str.contains('PTT[0-9]{3}')
-    df_totes.loc[df_totes['Pick Station'], 'Tote Colour'] = 'Both'
+    df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
+    df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
     df_totes['PLC_number'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
     df_totes.loc[df_totes['PLC_number'] > 34, 'Tote Colour'] = 'Blue'
     
