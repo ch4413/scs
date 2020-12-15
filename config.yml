@@ -1,11 +1,25 @@
 path:
     totes: raw_data/active_totes_20201123.csv
     availability: raw_data/Availability_with_Grey&Blue_1811-2511.csv
-    faults: raw_data/scs_tote_matched.csv
+    faults: "raw_data/SCS alerts Nov.csv"
     save: raw_data/results
-
-settings:
-    aggregation: Module
-    fault_level: code
-    target: "Blue Tote Loss"
-    
+features:
+    same_location_fault: "True"
+    shift: 0
+    fault_select_options: {"Tote Colour":["Blue"]}
+    duration_thres: 1
+    fault_grouping: "code"
+    agg_type: "count"
+    availability_select_options: {"Quadrant" : [0,1,2]}
+    remove_high_AT: "True"
+    aggregation: 'None'
+    weights: [1,0.5,0.25]
+    min_date: None
+    max_date: None
+model:
+    target: "Downtime"
+    features: ["Totes","Faults"]
+    split_options: {"test_size": 0.3,"random_state": None}
+    RF_options: {"num_trees": 100, "criterion": "mse", "max_depth": None, "dtree": False}
+    XGB_options: {"num_trees": 100,"max_depth": None}
+    selection_options: {'threshold': 'mean'}

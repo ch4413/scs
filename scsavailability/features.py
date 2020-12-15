@@ -231,8 +231,7 @@ def fault_select(fa, fault_select_options=None,duration_thres = 0):
     
     return fa
     
-@logger.logger
-def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
+def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
     '''
     function that aggregates fault data by specified metric (agg_type) and quadrant.
     - The quadrant parameter is used in case you want to filter for a specifc quadrant
@@ -245,7 +244,7 @@ def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
     
     df = df.copy()
   
-    if fault_agg_level == None:
+    if fault_agg_level == 'None':
 
         df = df.groupby('timestamp',as_index = False).agg({'Duration':agg_type})
         df.rename(columns = {'Duration':'Total Faults'},inplace = True)
@@ -325,7 +324,7 @@ def aggregate_availability(df, agg_level = None):
     '''
     df = df.copy()
    
-    if agg_level == None:
+    if agg_level == 'None':
     
         df = df.groupby(['timestamp'],as_index=False).agg({'Downtime':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
     else:
@@ -402,7 +401,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,fault
         max_date = av_df.index.max()
         
         
-    if agg_level == None:
+    if agg_level == 'None':
     
         av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
 
@@ -421,7 +420,7 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,fault
 
         df.reset_index(inplace=True)
 
-    if agg_level != None:
+    if agg_level != 'None':
         
         av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss", agg_level]].loc[min_date:max_date]
         
