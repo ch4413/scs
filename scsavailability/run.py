@@ -97,10 +97,10 @@ def run(config):
     av_agg = feat.aggregate_availability(av_sel, agg_level = config.features.aggregation)
     at_agg = feat.aggregate_totes(at_sel, agg_level = config.features.aggregation)
 
-    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, target = config.model.target ,faults=True, totes = True, agg_level = config.features.aggregation, remove_0=True)
+    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, faults=True, totes = True, agg_level = config.features.aggregation, remove_0=True)
 
     # Features
-    X,y = md.gen_feat_var(df)
+    X,y = md.gen_feat_var(df,target = config.model.target)
     y=1-y
     X_train, X_test, y_train, y_test = md.split(X,y)
 
