@@ -161,7 +161,7 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     # Copy desk
     fa['Desk_edit'] = fa['Desk']
     # Mark SCSs
-    fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk']
+    fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'PLC']
     # fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk']
     # fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'PLC']
     # Mark PTTs
@@ -184,11 +184,11 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     if remove_same_location_faults == True:
         fa = fa.sort_values('Duration').drop_duplicates(subset=['timestamp', 'PLC', 'Desk'],keep='last')
         print('duplicated location faults removed - max duration kept')
-        
-    #print('Faults Preprocessed')
     
-    return(fa)
-
+    ## !!HOTFIX
+    fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
+    print('HOTFIX: Quadrant only faults')
+    return fa
 
 def floor_shift_time_fa(df,shift=0):
     '''
@@ -216,7 +216,8 @@ def floor_shift_time_fa(df,shift=0):
     #floors units to round down to the nearest specified time interval (Hour by default)
     
     df['timestamp'] = df['timestamp'].dt.floor('H')
-    return(df)
+
+    return df 
 
 
 def fault_select(fa, fault_select_options=None,duration_thres = 0):
@@ -257,8 +258,7 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
         df = df.groupby(['timestamp',fault_agg_level],as_index = False).agg({'Duration':agg_type})
         df = pd.pivot_table(df,values = 'Duration',index = 'timestamp',columns = fault_agg_level,fill_value=0)
    
-    #print('Faults aggregated')
-    return(df)
+    return df 
 
 def av_at_select(av, at, availability_select_options = None,remove_high_AT = True, AT_limit = None):
 
@@ -312,7 +312,7 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
             if at['TOTES'][i]>AT_limit:
                 at['TOTES'][i]=AT_limit
                 
-    return av,at            
+    return av, at            
 
 @logger.logger
 def aggregate_availability(df, agg_level = None):
@@ -518,3 +518,44 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
 
     return df_totes, unmapped
+
+def get_data_faults(data, modules):
+    """
+    Summary
+    -------
+    Anything in same Module
+    PLC External applying to that PLC
+    Quadrant loop dataults for the module that quadrant is in
+    Outer
+
+    Parameters
+    ----------
+    data: pandas DataFrame
+        dataframe of features
+    module: numeric
+        dataframe
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs, unma
+    """
+    #1
+    mod_str = pd.Series(modules).astype('str')
+    faults1 = data[data['MODULE'].isin(mod_str)]
+    #2
+    a = data[['PLC', 'MODULE']].drop_duplicates()
+    b = a[(a['MODULE'].isin(mod_str)) & a['PLC'].str.contains('^C', regex=True)]
+    c = b['PLC'] + ' External'
+    faults2 = data[data['MODULE'].isin(list(c))]
+    #3
+    ## Module can't be assigned if Loop == Quadrant
+    q = data[data['MODULE'].isin(mod_str)]['Quadrant']
+    faults3 = data[(data['Loop'].isin(['Quadrant'])) & data['Quadrant'].isin(q)]
+    #4
+    faults4 = data[data['Loop'].isin(['Outside'])]
+    faults_mod = pd.concat([faults1, faults2, faults3, faults4])
+    
+    return faults_mod
