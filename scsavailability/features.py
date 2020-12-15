@@ -391,7 +391,7 @@ def weight_hours(df, weights = [1,0.5,0.25]):
     print('Previous Hours Weighted')
     return(df_weight)
 
-def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,faults=True, totes = True,agg_level=None,remove_0 = True):
+def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level=None):
     '''
     function that merges availability and fault datasets by date index
     '''
@@ -400,30 +400,35 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,fault
     fa_df = fa_df.copy()
     at_df = at_df.copy()
     
+    if min_date != None:
     
-    if min_date is None:
-        min_date = av_df.index.min()
-    if max_date is None:
-        max_date = av_df.index.max()
+        min_date = max(av_df.index.min(),fa_df.index.min(),at_df.index.min(),min_date)
         
+    else:
         
+        min_date = max(av_df.index.min(),fa_df.index.min(),at_df.index.min())
+        
+    if max_date != None:    
+
+        max_date = min(av_df.index.max(),fa_df.index.max(),at_df.index.max(),max_date)
+        
+    else:
+        
+
+        max_date = min(av_df.index.max(),fa_df.index.max(),at_df.index.max())
+    
+    fa_df = fa_df.loc[min_date:max_date]
+
     if agg_level == 'None':
+
     
         av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
+        
 
-        if faults == True and totes == False:
+        df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
 
-            df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
-
-        elif faults == False and totes == True:
-
-            df = av_df.merge(at_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
-
-        else:
-
-            df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
-            df = df.merge(at_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
-
+        df = df.merge(at_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
+        
         df.reset_index(inplace=True)
 
     if agg_level != 'None':
@@ -434,29 +439,14 @@ def merge_av_fa_at(av_df,fa_df=None,at_df=None,min_date=None,max_date=None,fault
         at_df.reset_index(inplace=True)
         fa_df.reset_index(inplace=True)
         
-        if faults == True and totes == False:
-            
-            df = av_df.merge(fa_df,how='inner',on = 'timestamp')
-
-        elif faults == False and totes == True:
-
-            df = av_df.merge(at_df,how='inner', on = ['timestamp',agg_level])
-
-        else:
-            df = av_df.merge(fa_df,how='inner',on = 'timestamp')
-            df = df.merge(at_df,how='inner', on = ['timestamp',agg_level])
-
-         
-        df.drop([agg_level],axis=1,inplace=True)
-
-    #remove columns with only zeros (faults that did not happen in this period of time or quadrant)
-
-    if remove_0 == True:
         
-        df = df.loc[:, (df != 0).any(axis=0)]
-    print('Datasets merged')
-    return(df)
-    
+        df = av_df.merge(fa_df,how='inner',on = 'timestamp')
+        df = df.merge(at_df,how='inner', on = ['timestamp',agg_level])
+        
+        df.drop([agg_level],axis=1,inplace=True)
+        
+    return df   
+
 def add_code(data):
     """
     Summary

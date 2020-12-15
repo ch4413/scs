@@ -15,7 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def gen_feat_var(df,target = "Downtime"):
+def gen_feat_var(df,target = "Downtime",features = ["Faults","Totes"]):
     
     """
     Summary
@@ -40,7 +40,22 @@ def gen_feat_var(df,target = "Downtime"):
     
     df = df[~df[target].isnull()]
     
-    X = df[df.columns[4:]]
+    if "Faults" in features or "Totes" in features:
+    
+        X = df[df.columns[4:]]
+        
+    elif "Faults" in features:
+        
+        X = df[df.columns[4:-1]]
+        
+    elif "Totes" in features:
+         
+        X = df['TOTES']
+        
+    else:
+        
+        print('Features not valid')
+        
     y = df[target]
     
     return X,y
