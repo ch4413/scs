@@ -161,12 +161,14 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     # Copy desk
     fa['Desk_edit'] = fa['Desk']
     # Mark SCSs
-    fa.loc[fa['PLC'].str.contains('SCS'), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains('SCS'), 'PLC']
+    fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk']
+    # fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk']
+    # fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'PLC']
     # Mark PTTs
     fa.loc[~(fa['Pick Station']==False), 'Desk_edit'] = fa[~(fa['Pick Station']==False)]['Pick Station'].apply(lambda x: x[:-1])
     # Set NA desk for outside stuff
     fa.loc[fa['PLC'].isin(['C23', 'C16', 'C15', 'C17']), 'Desk_edit'] = 'X'
-    fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
+    #fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
     fa.loc[fa['PLCN'] > 34, 'Desk_edit'] = 'X'
     fa = pd.merge(fa, lu, how='left', on=['PLC', 'Desk_edit']).drop('Desk_edit', axis=1)
     fa['timestamp'] = pd.to_datetime(fa['timestamp'],dayfirst=True)
@@ -362,7 +364,7 @@ def aggregate_totes(active_totes, agg_level = None):
         
         
     active_totes = active_totes.set_index('timestamp')    
-    
+        
     return(active_totes)
 
 
@@ -477,10 +479,9 @@ def add_code(data):
     scs = data.copy()
     scs['Asset Code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
     scs['Asset Code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
-    
+    scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Asset Code'] = scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Desk']
     scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
     
-    #scs['Pick Station'] = scs['Alert'].str.extract('(PTT[0-9]{3})')[0]
     return scs
 
 def add_tote_colour(scs_code):
@@ -507,8 +508,8 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
     df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
     df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
-    df_totes['PLC_number'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
-    df_totes.loc[df_totes['PLC_number'] > 34, 'Tote Colour'] = 'Blue'
+    df_totes['PLCN'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
+    df_totes.loc[df_totes['PLCN'] > 34, 'Tote Colour'] = 'Blue'
     
     # Unmapped
     unmapped = df_totes[df_totes['Tote Colour'].isna()]['Asset Code'].value_counts().reset_index().copy()
