@@ -161,12 +161,14 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     # Copy desk
     fa['Desk_edit'] = fa['Desk']
     # Mark SCSs
-    fa.loc[fa['PLC'].str.contains('SCS'), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains('SCS'), 'PLC']
+    fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'PLC']
+    # fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk']
+    # fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'PLC']
     # Mark PTTs
     fa.loc[~(fa['Pick Station']==False), 'Desk_edit'] = fa[~(fa['Pick Station']==False)]['Pick Station'].apply(lambda x: x[:-1])
     # Set NA desk for outside stuff
     fa.loc[fa['PLC'].isin(['C23', 'C16', 'C15', 'C17']), 'Desk_edit'] = 'X'
-    fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
+    #fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
     fa.loc[fa['PLCN'] > 34, 'Desk_edit'] = 'X'
     fa = pd.merge(fa, lu, how='left', on=['PLC', 'Desk_edit']).drop('Desk_edit', axis=1)
     fa['timestamp'] = pd.to_datetime(fa['timestamp'],dayfirst=True)
@@ -182,11 +184,11 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     if remove_same_location_faults == True:
         fa = fa.sort_values('Duration').drop_duplicates(subset=['timestamp', 'PLC', 'Desk'],keep='last')
         print('duplicated location faults removed - max duration kept')
-        
-    #print('Faults Preprocessed')
     
-    return(fa)
-
+    ## !!HOTFIX
+    fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
+    print('HOTFIX: Quadrant only faults')
+    return fa
 
 def floor_shift_time_fa(df,shift=0):
     '''
@@ -214,7 +216,8 @@ def floor_shift_time_fa(df,shift=0):
     #floors units to round down to the nearest specified time interval (Hour by default)
     
     df['timestamp'] = df['timestamp'].dt.floor('H')
-    return(df)
+
+    return df 
 
 
 def fault_select(fa, fault_select_options=None,duration_thres = 0):
@@ -255,8 +258,7 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
         df = df.groupby(['timestamp',fault_agg_level],as_index = False).agg({'Duration':agg_type})
         df = pd.pivot_table(df,values = 'Duration',index = 'timestamp',columns = fault_agg_level,fill_value=0)
    
-    #print('Faults aggregated')
-    return(df)
+    return df 
 
 def av_at_select(av, at, availability_select_options = None,remove_high_AT = True, AT_limit = None):
 
@@ -310,7 +312,7 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
             if at['TOTES'][i]>AT_limit:
                 at['TOTES'][i]=AT_limit
                 
-    return av,at            
+    return av, at            
 
 @logger.logger
 def aggregate_availability(df, agg_level = None):
@@ -362,7 +364,7 @@ def aggregate_totes(active_totes, agg_level = None):
         
         
     active_totes = active_totes.set_index('timestamp')    
-    
+        
     return(active_totes)
 
 
@@ -467,10 +469,9 @@ def add_code(data):
     scs = data.copy()
     scs['Asset Code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
     scs['Asset Code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
-    
+    scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Asset Code'] = scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Desk']
     scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
     
-    #scs['Pick Station'] = scs['Alert'].str.extract('(PTT[0-9]{3})')[0]
     return scs
 
 def add_tote_colour(scs_code):
@@ -497,8 +498,8 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
     df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
     df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
-    df_totes['PLC_number'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
-    df_totes.loc[df_totes['PLC_number'] > 34, 'Tote Colour'] = 'Blue'
+    df_totes['PLCN'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
+    df_totes.loc[df_totes['PLCN'] > 34, 'Tote Colour'] = 'Blue'
     
     # Unmapped
     unmapped = df_totes[df_totes['Tote Colour'].isna()]['Asset Code'].value_counts().reset_index().copy()
@@ -507,3 +508,44 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
 
     return df_totes, unmapped
+
+def get_data_faults(data, modules):
+    """
+    Summary
+    -------
+    Anything in same Module
+    PLC External applying to that PLC
+    Quadrant loop dataults for the module that quadrant is in
+    Outer
+
+    Parameters
+    ----------
+    data: pandas DataFrame
+        dataframe of features
+    module: numeric
+        dataframe
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs, unma
+    """
+    #1
+    mod_str = pd.Series(modules).astype('str')
+    faults1 = data[data['MODULE'].isin(mod_str)]
+    #2
+    a = data[['PLC', 'MODULE']].drop_duplicates()
+    b = a[(a['MODULE'].isin(mod_str)) & a['PLC'].str.contains('^C', regex=True)]
+    c = b['PLC'] + ' External'
+    faults2 = data[data['MODULE'].isin(list(c))]
+    #3
+    ## Module can't be assigned if Loop == Quadrant
+    q = data[data['MODULE'].isin(mod_str)]['Quadrant']
+    faults3 = data[(data['Loop'].isin(['Quadrant'])) & data['Quadrant'].isin(q)]
+    #4
+    faults4 = data[data['Loop'].isin(['Outside'])]
+    faults_mod = pd.concat([faults1, faults2, faults3, faults4])
+    
+    return faults_mod
