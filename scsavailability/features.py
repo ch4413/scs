@@ -136,7 +136,7 @@ def preprocess_faults(fa,remove_same_location_faults = True):
 
     #Assign PLC code to Quadrants
     Quad_1 = ['C0' + str(i) for i in range(5,8)]  + ['SCSM0' + str(i) for i in range(1,6)]
-    Quad_2 = ['C0' + str(i) for i in range(8,10)] + ['SCSM0' + str(i) for i in range(7,10)] + ['SCSM11']
+    Quad_2 = ['C0' + str(i) for i in range(8,10)] + ['SCSM0' + str(i) for i in range(7,10)] + ['SCSM10']
     Quad_3 = ['C'  + str(i) for i in range(10,13)] + ['SCSM' + str(i) for i in range(11,16)]
     Quad_4 = ['C'  + str(i) for i in range(13,15)] + ['SCSM' + str(i) for i in range(17,21)]
 
@@ -259,7 +259,7 @@ def faults_aggregate(df,fault_agg_level,agg_type = 'count'):
     #print('Faults aggregated')
     return(df)
 
-def av_at_select(av, at, availability_select_options = None,remove_high_AT = True):
+def av_at_select(av, at, availability_select_options = None,remove_high_AT = True, AT_limit = None):
 
     av = av.copy()
     at = at.copy()
@@ -280,7 +280,7 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
 
             else:
 
-                print('\nNot a valid level, returned all data\n')
+                print('\nNot a valid level, returned all data\n')          
             
     if remove_high_AT == True:
         
@@ -304,6 +304,12 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
         at = at[at['TOTES']<=at['Upper limit']]
     
         at.drop('Upper limit',axis=1,inplace=True)
+        
+    if AT_limit != None:
+        at.reset_index(inplace=True)
+        for i in range(len(at['TOTES'])):
+            if at['TOTES'][i]>AT_limit:
+                at['TOTES'][i]=AT_limit
                 
     return av,at            
 
