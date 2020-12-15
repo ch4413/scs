@@ -11,7 +11,7 @@ import re
 import yaml
 
 import scsavailability as scs
-from scsavailability import features as feat, model as md, plotting as pt, results as rt
+from scsavailability import features as feat, model as md, plotting as pt, results as rt, score as sc
 
 def parse_config(path=None, data=None, tag='!ENV'):
     """
@@ -32,7 +32,7 @@ def parse_config(path=None, data=None, tag='!ENV'):
     :rtype: dict[str, T]
     """
     # pattern for global vars: look for ${word}
-    pattern = re.compile('.*?\${(\w+)}.*?')
+    pattern = re.compile(r'.*?\${(\w+)}.*?')
     loader = yaml.SafeLoader
 
     # the tag will be used to mark where to start searching for the pattern
@@ -79,33 +79,40 @@ def run(config):
     at = pd.read_csv(config.path.totes)
     av = pd.read_csv(config.path.availability)
     fa = pd.read_csv(config.path.faults)
+    # Need to fold into pre-processing
+    fa = feat.add_code(fa)
+    fa, unmapped = feat.add_tote_colour(fa)
 
     at = feat.pre_process_AT(at)
     av = feat.pre_process_av(av)
-    fa = feat.preprocess_faults(fa,remove_same_location_faults = True)
+    fa = feat.preprocess_faults(fa, remove_same_location_faults = True)
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
-    fa_sel = feat.fault_select(fa_floor, select_level = 'Tote Colour', selection = ['Blue','Both'])
-    fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level=config.settings.fault_level, agg_type = 'count')
+    fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
+    
+    fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level= config.features.aggregation, agg_type = 'count')
 
-    av,at = feat.av_at_select(av, at, remove_high_AT = False)
-    av_agg = feat.aggregate_availability(av, agg_level = config.settings.aggregation)
-    at_agg = feat.aggregate_totes(at, agg_level = config.settings.aggregation)
+    av_sel,at_sel = feat.av_at_select(av, at, remove_high_AT = True, availability_select_options = None)
+    av_agg = feat.aggregate_availability(av_sel, agg_level = config.features.aggregation)
+    at_agg = feat.aggregate_totes(at_sel, agg_level = config.features.aggregation)
 
-    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, target = config.settings.target,faults=True, totes = True, agg_level = config.settings.aggregation)
-
-    # Fix
-    df = df[df['TOTES']<60].reset_index(drop=True)
+    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, faults=True, totes = True, agg_level = config.features.aggregation, remove_0=True)
 
     # Features
-    X,y = md.gen_feat_var(df)
-    X_train, X_test, y_train, y_test = md.split(X,y,test_size=0.3,random_state=101)
+    X,y = md.gen_feat_var(df,target = config.model.target)
+    y=1-y
+    X_train, X_test, y_train, y_test = md.split(X,y)
 
-    # Model
-    Linear_mdl, predictions_LM, Coeff, fit_metrics =md.run_LR_model(X_train, X_test, y_train, y_test)
-    cv_R2, df_cv = md.cross_validate_r2(Linear_mdl, X, y, n_folds = 10, shuffle = True, random_state = 101)
-    rt.create_output(config, fit_metrics, Coeff, df_cv)
+    # # Model
+    Linear_mdl, predictions_LM, Coeff, fit_metrics = md.run_LR_model(X_train, X_test, y_train, y_test)
+    X_sel_lm = md.select_features(X, y, Linear_mdl, **config.model.selection_options)
+    cv_R2 = md.cross_validate_r2(Linear_mdl, X_sel_lm, y, n_folds = 10, shuffle = True, random_state = 101)
+
+    rt.create_output(config, fit_metrics, Coeff, cv_R2[1])
+
+    print(sc.lm_coefficients(Linear_mdl, X, y))
+
 
 if __name__ == '__main__':
     print('running with config')

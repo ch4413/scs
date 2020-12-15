@@ -362,8 +362,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     return model, pred, Coeff, fit_metrics
 
-def select_features(X, y, model, selection_options = {'thres': 'mean', 
-                                                      'max_feat': None}):
+def select_features(X, y, model, **kwargs):
     
     """
     Summary
@@ -400,7 +399,7 @@ def select_features(X, y, model, selection_options = {'thres': 'mean',
 
     #Fit select model
 
-    sel = SelectFromModel(estimator = model,threshold = selection_options['thres'], max_features = selection_options['max_feat']).fit(X,y)
+    sel = SelectFromModel(estimator = model, **kwargs).fit(X,y)
 
     #Set selected features
 
