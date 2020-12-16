@@ -187,7 +187,8 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     
     ## !!HOTFIX
     fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
-    print('HOTFIX: Quadrant only faults')
+    fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract('(C[0-9]{2}PTT[0-9]{3})')[0]
+    print('HOTFIX: Quadrant only faults, PTT Asset Code update')
     return fa
 
 def floor_shift_time_fa(df,shift=0):
