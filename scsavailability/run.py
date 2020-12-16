@@ -89,6 +89,7 @@ def run(config):
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
+    #fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
     fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
     
     fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level= config.features.aggregation, agg_type = 'count')
@@ -97,10 +98,10 @@ def run(config):
     av_agg = feat.aggregate_availability(av_sel, agg_level = config.features.aggregation)
     at_agg = feat.aggregate_totes(at_sel, agg_level = config.features.aggregation)
 
-    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, faults=True, totes = True, agg_level = config.features.aggregation, remove_0=True)
+    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, agg_level = config.features.aggregation)
 
     # Features
-    X,y = md.gen_feat_var(df,target = config.model.target)
+    X,y = md.gen_feat_var(df, target = config.model.target)
     y=1-y
     X_train, X_test, y_train, y_test = md.split(X,y)
 
