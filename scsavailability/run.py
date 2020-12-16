@@ -89,7 +89,6 @@ def run(config):
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
-    #fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
     fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
     
     fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level= config.features.aggregation, agg_type = 'count')

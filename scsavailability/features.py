@@ -221,19 +221,19 @@ def floor_shift_time_fa(df,shift=0):
     return df 
 
 
-def fault_select(fa, fault_select_options=None,duration_thres = 0):
+def fault_select(data, fault_select_options='None',duration_thres = 0):
     
-    fa = fa.copy()
+    data = data.copy()
     
-    if fault_select_options != None:
+    if fault_select_options != 'None':
        
         for i in fault_select_options.keys():
     
-            fa = fa[fa[i].isin(fault_select_options[i])] 
+            data = data[data[i].isin(fault_select_options[i])] 
 
-    fa = fa[fa['Duration']>duration_thres]
+    data = data[data['Duration']>duration_thres]
     
-    return fa
+    return data
     
 def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
     '''
