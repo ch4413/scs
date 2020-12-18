@@ -229,9 +229,10 @@ def fault_select(data, fault_select_options='None',duration_thres = 0):
        
         for i in fault_select_options.keys():
     
+            data = data[data.get(i).isin(fault_select_options[i])] 
             data = data[data[i].isin(fault_select_options[i])] 
 
-    data = data[data['Duration']>duration_thres]
+    data = data[data['Duration' ] > duration_thres]
     
     return data
     
