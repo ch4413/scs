@@ -40,7 +40,7 @@ def gen_feat_var(df,target = "Downtime",features = ["Faults","Totes"]):
     
     df = df[~df[target].isnull()]
     
-    if "Faults" in features or "Totes" in features:
+    if "Faults" in features and "Totes" in features:
     
         X = df[df.columns[4:]]
         
@@ -50,7 +50,7 @@ def gen_feat_var(df,target = "Downtime",features = ["Faults","Totes"]):
         
     elif "Totes" in features:
          
-        X = df['TOTES']
+        X = pd.DataFrame(df['TOTES'])
         
     else:
         
@@ -456,34 +456,10 @@ def cross_validate_r2(model, X, y, n_folds=10, shuffle = True, random_state = No
     
     return scores.mean(), df_cross_val
 
-def stats_model(lm,X,y):
-    
-    params = np.append(lm.intercept_,lm.coef_)
-    predictions = lm.predict(X)
-
-    newX = pd.DataFrame({"Constant":np.ones(len(X))}).join(pd.DataFrame(X))
-    MSE = (sum((y-predictions)**2))/(len(newX)-len(newX.columns))
-
-    var_b = MSE*(np.linalg.inv(np.dot(newX.T,newX)).diagonal())
-    sd_b = np.sqrt(var_b)
-    ts_b = params/ sd_b
-
-    print(newX)
-    
-    p_values =[2*(1-stats.t.cdf(np.abs(i),(len(newX)-len(newX[0])))) for i in ts_b]
-
-    sd_b = np.round(sd_b,3)
-    ts_b = np.round(ts_b,3)
-    p_values = np.round(p_values,3)
-    params = np.round(params,4)
-
-    myDF3 = pd.DataFrame()
-    myDF3["Coefficients"],myDF3["Standard Errors"],myDF3["t values"],myDF3["Probabilities"] = [params,sd_b,ts_b,p_values]
-    print(myDF3)
 
 '-------------------------------------------------------------------------------------------------------------------------------------- '   
     
-def fit_n_r2(X, Y, model_type, **kwargs):
+def fit_n_r2(X, y, model_type, **kwargs):
     """
     Summary
     -------

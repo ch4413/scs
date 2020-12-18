@@ -316,7 +316,7 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
     return av, at            
 
 @logger.logger
-def aggregate_availability(df, agg_level = None):
+def aggregate_availability(df, agg_level = 'None'):
     '''
     function to aggregate availability at chosen level:
     
@@ -343,7 +343,7 @@ def aggregate_availability(df, agg_level = None):
 #    print('Availability data aggregated')
     return(df)
 
-def aggregate_totes(active_totes, agg_level = None):
+def aggregate_totes(active_totes, agg_level = 'None'):
     
     active_totes = active_totes.copy()
     
@@ -394,7 +394,7 @@ def weight_hours(df, weights = [1,0.5,0.25]):
     print('Previous Hours Weighted')
     return(df_weight)
 
-def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level=None):
+def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None'):
     '''
     function that merges availability and fault datasets by date index
     '''
