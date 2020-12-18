@@ -9,14 +9,15 @@ features:
 	
 	shift: 0
 
-	fault_select_options: {'Tote_Colour' : ['Blue', 'Both'], 'Module' : [1, 2, 3]}
-	duration_thres: 1
+	fault_select_options: {'Tote_Colour' : ['Blue', 'Both']}
+	duration_thres: 0
 
-	fault_grouping: "code"
+	fault_grouping: "Asset Code"
 	agg_type: 'count'
 	
 	availability_select_options: {'Quadrant' : [0,1,2]}
 	remove_high_AT: True
+	AT_limit: None
 
 	aggregation: None
 	
