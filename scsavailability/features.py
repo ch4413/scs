@@ -545,7 +545,7 @@ def add_tote_colour(scs_code):
 
     return df_totes, unmapped
 
-def get_data_faults(data, modules):
+def get_data_faults(data, modules, PTT = 'None'):
     """
     Summary
     -------
@@ -584,4 +584,7 @@ def get_data_faults(data, modules):
     faults4 = data[data['Loop'].isin(['Outside'])]
     faults_mod = pd.concat([faults1, faults2, faults3, faults4])
     
+    if PTT != 'None':
+        faults_mod = faults_mod[faults_mod['Pick Station'].isin([PTT,False])]
+
     return faults_mod
