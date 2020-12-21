@@ -49,6 +49,22 @@ def load_tote_lookup():
     return pd.read_csv(stream)
 
 @logger.logger
+def load_ID_lookup():
+    """Return a dataframe about the 68 different Roman Emperors.
+
+    Contains the following fields:
+        index          68 non-null int64
+        name           68 non-null object
+        name.full      68 non-null object
+    ... (docstring truncated) ...
+
+    """
+    # This is a stream-like object. If you want the actual info, call
+    # stream.read()
+    stream = pkg_resources.resource_stream(__name__, 'data/ID_lookup.csv')
+    return pd.read_csv(stream)    
+
+@logger.logger
 def pre_process_AT(active_totes):
     
     active_totes = active_totes[~active_totes['MODULE_ASSIGNED'].isin(['ECB', 'RCB'])].copy()
@@ -129,7 +145,7 @@ def pre_process_av(av):
     return(av)
 
 @logger.logger
-def preprocess_faults(fa,remove_same_location_faults = True):
+def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
     fa.columns = pd.Series(fa.columns).str.strip()
     fa.rename(columns = {fa.columns[2]:'timestamp'},inplace = True)
@@ -173,12 +189,30 @@ def preprocess_faults(fa,remove_same_location_faults = True):
     fa = pd.merge(fa, lu, how='left', on=['PLC', 'Desk_edit']).drop('Desk_edit', axis=1)
     fa['timestamp'] = pd.to_datetime(fa['timestamp'],dayfirst=True)
     
+    fa['0 Merger'] = fa['Alert'].str.contains('extended|retracted')
+    
+    ID_lu = load_ID_lookup()
+
+    fa = fa.merge(ID_lu,how = 'outer', on = ["Fault ID","0 Merger"])
+  
+    fa.drop('0 Merger',axis=1,inplace=True)
+
+    if remove_warnings == True:
+
+        fa = fa[fa['Alert Type']!='Warning']
+
+   
     #drop rows where there is no duration data
     fa = fa.dropna(subset = ['Duration'])
 
     #convert duration string to time delta and then to seconds (float)
     fa['Duration'] = pd.to_timedelta(fa['Duration'].str.slice(start=2))
     fa['Duration'] = fa['Duration'].dt.total_seconds()
+
+    if remove_door == True:             
+         
+        fa = fa[~((fa['Duration']>3600) & (fa['Alert'].str.contains('access door')))]
+
     
     #drop faults that happen at same time and in same location (keep only the one with max duration)
     if remove_same_location_faults == True:
@@ -232,7 +266,7 @@ def fault_select(data, fault_select_options='None',duration_thres = 0):
             data = data[data.get(i).isin(fault_select_options[i])] 
             data = data[data[i].isin(fault_select_options[i])] 
 
-    data = data[data['Duration' ] > duration_thres]
+    data = data[data['Duration'] > duration_thres]
     
     return data
     
