@@ -90,10 +90,12 @@ def run(config):
     fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
     fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
+    fa_sel = feat.get_data_faults(fa_sel, modules = config.features.filter_select_options.Module)
     
     fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level= config.features.aggregation, agg_type = 'count')
 
-    av_sel,at_sel = feat.av_at_select(av, at, remove_high_AT = True, availability_select_options = None)
+    av_sel,at_sel = feat.av_at_select(av, at, remove_high_AT = True, availability_select_options = config.features.filter_select_options)
+
     av_agg = feat.aggregate_availability(av_sel, agg_level = config.features.aggregation)
     at_agg = feat.aggregate_totes(at_sel, agg_level = config.features.aggregation)
 

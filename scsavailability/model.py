@@ -361,7 +361,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     #plt.xticks(fontsize=18)
     
     return model, pred, Coeff, fit_metrics
-
+    
 def select_features(X, y, model, **kwargs):
     
     """
