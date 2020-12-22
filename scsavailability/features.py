@@ -402,7 +402,7 @@ def aggregate_totes(active_totes, agg_level = 'None'):
     
     active_totes['timestamp'] = active_totes['timestamp'].dt.floor('H')
     
-    if agg_level == 'Module':
+    if agg_level == 'Module' or 'PTT':
     
         active_totes = active_totes.groupby(['timestamp','Module'],as_index=False).mean()
         active_totes.drop('Quadrant',axis=1,inplace=True)
@@ -494,7 +494,6 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         av_df.reset_index(inplace=True)
         at_df.reset_index(inplace=True)
         fa_df.reset_index(inplace=True)
-        
         
         df = av_df.merge(fa_df,how='inner',on = 'timestamp')
         df = df.merge(at_df,how='inner', on = ['timestamp',agg_level])
