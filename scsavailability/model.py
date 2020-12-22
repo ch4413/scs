@@ -293,7 +293,7 @@ def run_XGB_model(X_train, X_test, y_train, y_test,XGB_options = {'num_trees': 1
 
 
 
-def run_LR_model(X_train, X_test, y_train, y_test):
+def run_LR_model(X_train, X_test, y_train, y_test, **kwargs):
     
     """
     Summary
@@ -329,7 +329,7 @@ def run_LR_model(X_train, X_test, y_train, y_test):
     
     #Fit Model
     
-    model = LinearRegression()
+    model = LinearRegression(**kwargs)
     
     model.fit(X_train, y_train)
 
