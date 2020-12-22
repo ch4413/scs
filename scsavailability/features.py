@@ -64,6 +64,23 @@ def load_ID_lookup():
     stream = pkg_resources.resource_stream(__name__, 'data/ID_lookup.csv')
     return pd.read_csv(stream)    
 
+
+@logger.logger
+def load_PTT_lookup():
+    """Return a dataframe about the 68 different Roman Emperors.
+
+    Contains the following fields:
+        index          68 non-null int64
+        name           68 non-null object
+        name.full      68 non-null object
+    ... (docstring truncated) ...
+
+    """
+    # This is a stream-like object. If you want the actual info, call
+    # stream.read()
+    stream = pkg_resources.resource_stream(__name__, 'data/PTT_lookup.csv')
+    return pd.read_csv(stream)        
+
 @logger.logger
 def pre_process_AT(active_totes):
     
@@ -569,6 +586,14 @@ def get_data_faults(data, modules, PTT = 'None'):
     --------
     scs, unma
     """
+    data = data.copy()
+    PTT_lu = load_PTT_lookup()
+
+    data.drop('Pick Station',axis=1,inplace=True)
+    data = data.merge(PTT_lu,how = 'outer', on = 'Asset Code')
+    data['Pick Station'] = data['Pick Station'].fillna(False)
+
+
     #1
     mod_str = pd.Series(modules).astype('str')
     faults1 = data[data['MODULE'].isin(mod_str)]
