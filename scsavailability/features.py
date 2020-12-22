@@ -402,7 +402,7 @@ def aggregate_totes(active_totes, agg_level = 'None'):
     
     active_totes['timestamp'] = active_totes['timestamp'].dt.floor('H')
     
-    if agg_level == 'Module' or 'PTT':
+    if agg_level == 'Module' or agg_level == 'PTT':
     
         active_totes = active_totes.groupby(['timestamp','Module'],as_index=False).mean()
         active_totes.drop('Quadrant',axis=1,inplace=True)
