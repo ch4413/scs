@@ -64,6 +64,23 @@ def load_ID_lookup():
     stream = pkg_resources.resource_stream(__name__, 'data/ID_lookup.csv')
     return pd.read_csv(stream)    
 
+
+@logger.logger
+def load_PTT_lookup():
+    """Return a dataframe about the 68 different Roman Emperors.
+
+    Contains the following fields:
+        index          68 non-null int64
+        name           68 non-null object
+        name.full      68 non-null object
+    ... (docstring truncated) ...
+
+    """
+    # This is a stream-like object. If you want the actual info, call
+    # stream.read()
+    stream = pkg_resources.resource_stream(__name__, 'data/PTT_lookup.csv')
+    return pd.read_csv(stream)        
+
 @logger.logger
 def pre_process_AT(active_totes):
     
@@ -385,7 +402,7 @@ def aggregate_totes(active_totes, agg_level = 'None'):
     
     active_totes['timestamp'] = active_totes['timestamp'].dt.floor('H')
     
-    if agg_level == 'Module':
+    if agg_level == 'Module' or 'PTT':
     
         active_totes = active_totes.groupby(['timestamp','Module'],as_index=False).mean()
         active_totes.drop('Quadrant',axis=1,inplace=True)
@@ -478,7 +495,6 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         at_df.reset_index(inplace=True)
         fa_df.reset_index(inplace=True)
         
-        
         df = av_df.merge(fa_df,how='inner',on = 'timestamp')
         df = df.merge(at_df,how='inner', on = ['timestamp',agg_level])
         
@@ -569,6 +585,14 @@ def get_data_faults(data, modules, PTT = 'None'):
     --------
     scs, unma
     """
+    data = data.copy()
+    PTT_lu = load_PTT_lookup()
+
+    data.drop('Pick Station',axis=1,inplace=True)
+    data = data.merge(PTT_lu,how = 'outer', on = 'Asset Code')
+    data['Pick Station'] = data['Pick Station'].fillna(False)
+
+
     #1
     mod_str = pd.Series(modules).astype('str')
     faults1 = data[data['MODULE'].isin(mod_str)]
