@@ -221,7 +221,8 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     
     ## !!HOTFIX
     fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
-    fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract('(C[0-9]{2}PTT[0-9]{3})')[0]
+    fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0]
+    fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert'].str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', '')
     print('HOTFIX: Quadrant only faults, PTT Asset Code update')
     return fa
 
