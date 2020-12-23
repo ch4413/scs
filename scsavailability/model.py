@@ -413,7 +413,7 @@ def select_features(X, y, model, **kwargs):
     
     return X_sel
 
-def cross_validate_r2(model, X, y, n_folds=10, shuffle = True, random_state = None):
+def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = None):
     
     """
     Summary

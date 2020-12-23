@@ -314,12 +314,12 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
    
     return df 
 
-def av_at_select(av, at, availability_select_options = None,remove_high_AT = True, AT_limit = None):
+def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None"):
 
     av = av.copy()
     at = at.copy()
     
-    if availability_select_options != None:
+    if availability_select_options != "None":
        
         for i in availability_select_options.keys():
     
@@ -360,12 +360,10 @@ def av_at_select(av, at, availability_select_options = None,remove_high_AT = Tru
     
         at.drop('Upper limit',axis=1,inplace=True)
         
-    if AT_limit != None:
-        at.reset_index(inplace=True)
-        for i in range(len(at['TOTES'])):
-            if at['TOTES'][i]>AT_limit:
-                at['TOTES'][i]=AT_limit
-                
+    if AT_limit != "None":
+       
+        at['TOTES'] = at['TOTES'].clip(0, AT_limit)
+     
     return av, at            
 
 @logger.logger
