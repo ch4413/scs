@@ -243,7 +243,7 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     print('HOTFIX: Quadrant only faults, PTT Asset Code update')
     return fa
 
-def floor_shift_time_fa(df,shift=0):
+def floor_shift_time_fa(fa,shift=0):
     '''
     function that shifts and floors datetime column in a pandas df to the specific time unit
     Note: defaults to HOUR
@@ -258,19 +258,46 @@ def floor_shift_time_fa(df,shift=0):
     
     '''
     
-    df = df.copy()
+    fa_floor = fa.copy()
     
     #Shifts entry time by desired amount
     
-    df['timestamp'] = df['timestamp'].apply(lambda x:x+pd.to_timedelta(shift,unit='m'))
+    fa_floor['timestamp'] = fa_floor['timestamp'].apply(lambda x:x+pd.to_timedelta(shift,unit='m'))
+  
+    fa_floor.sort_values('Duration',ascending=False,inplace=True)
     
-    print('Time shifted by ' + str(shift) + 'Minutes')
+    fa_floor['End'] = fa_floor['timestamp'].dt.ceil('H')
+    fa_floor['Start'] = fa_floor['timestamp'].dt.floor('H')
     
-    #floors units to round down to the nearest specified time interval (Hour by default)
+    fa_floor['Time Passed'] =pd.to_timedelta(fa_floor['timestamp']-fa_floor['Start']).dt.total_seconds()
+    fa_floor['Time Left'] =pd.to_timedelta(fa_floor['End']-fa_floor['timestamp']).dt.total_seconds()
     
-    df['timestamp'] = df['timestamp'].dt.floor('H')
+    fa_floor['Hours'] = np.ceil((fa_floor['Duration']+fa_floor['Time Passed'])/3600)
+    
+    fa_floor = fa_floor.loc[fa_floor.index.repeat(fa_floor.Hours)].reset_index(drop=True)
+       
+    fa_floor['Counts'] = fa_floor.groupby(['Number','Hours','timestamp']).cumcount()
+    
+    fa_floor['timestamp'] = fa_floor['Start'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
+    
+    fa_floor.reset_index(inplace=True,drop=True)
+       
+    for i in fa_floor.index:
 
-    return df 
+        if fa_floor['Counts'][i] ==  0 and (fa_floor['Duration'][i] + fa_floor['Time Passed'][i])>3600:
+            fa_floor['Duration'][i] = fa_floor['Time Left'][i]
+            fa_floor['Duration'][i+1] = fa_floor['Duration'][i+1] - fa_floor['Duration'][i]
+        elif fa_floor['Counts'][i] !=  0 and fa_floor['Duration'][i]>3600:
+            fa_floor['Duration'][i+1] = fa_floor['Duration'][i] - 3600
+            fa_floor['Duration'][i] =3600
+    
+    fa_floor.sort_values('timestamp',ascending=True,inplace=True)
+    
+    fa_floor.drop(['Start','End','Time Passed','Time Left','Hours','Counts'],axis=1,inplace=True)
+    
+    fa_floor.reset_index(inplace=True,drop=True)
+    
+    return fa_floor
 
 
 def fault_select(data, fault_select_options='None',duration_thres = 0):
@@ -288,7 +315,7 @@ def fault_select(data, fault_select_options='None',duration_thres = 0):
     
     return data
     
-def faults_aggregate(df, fault_agg_level, agg_type = 'count'):
+def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
     '''
     function that aggregates fault data by specified metric (agg_type) and quadrant.
     - The quadrant parameter is used in case you want to filter for a specifc quadrant
@@ -420,7 +447,7 @@ def aggregate_totes(active_totes, agg_level = 'None'):
     return(active_totes)
 
 
-def weight_hours(df, weights = [1,0.5,0.25]):
+def weight_hours(df, weights = [1]):
     '''
     function to include weighted fault data from previous hours
     
@@ -499,6 +526,41 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         df.drop([agg_level],axis=1,inplace=True)
         
     return df   
+
+def create_PTT_df(fa_floor,at,av,**kwargs):
+    
+    pick_stations = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052','PTT071','PTT072','PTT081','PTT082','PTT091','PTT092','PTT101','PTT102','PTT111','PTT112','PTT121','PTT122','PTT131','PTT132','PTT141','PTT142','PTT151','PTT152','PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
+    df_PTT = pd.DataFrame()
+    fa_PTT = []
+    
+    for PTT in pick_stations:
+        
+        module = int(PTT[3:5])
+        
+        fa_floor = fa_floor.copy()
+        
+        #fa_floor['Duration'] = np.log10(fa_floor['Duration']) + 1
+        
+        fa_sel = get_data_faults(fa_floor, modules=[module],PTT = PTT)                                                        
+        fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
+        fa_agg = weight_hours(df = fa_agg, **kwargs)
+        
+
+        av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = False, AT_limit = 60)
+        av_agg = aggregate_availability(av_sel, agg_level = 'Module')
+        at_agg = aggregate_totes(at_sel, agg_level = 'Module')
+
+        df = merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg , agg_level = 'Module')
+        
+        df_PTT = pd.concat([df_PTT,df],axis=0,join='outer')
+        fa_PTT.append(fa_agg)
+    
+    df_PTT = df_PTT.fillna(0) 
+    
+    totes_col = df_PTT.pop('TOTES')
+    df_PTT['TOTES'] = totes_col
+    
+    return df_PTT, fa_PTT
 
 def add_code(data):
     """
