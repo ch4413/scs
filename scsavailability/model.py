@@ -1,13 +1,11 @@
 from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.feature_selection import SelectFromModel
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
-from xgboost import XGBRegressor
 from scipy import stats
+import statsmodels.api as sm
 
 import pandas as pd
 import numpy as np
@@ -99,200 +97,6 @@ def split(X,y,split_options = {'test_size':0.3,
     
     return X_train, X_test, y_train, y_test
 
-    
-def run_RF_model(X_train, X_test, y_train, y_test,RF_options = {'num_trees': 100, 
-                                                                'criterion':'mse', 
-                                                                'max_depth':None, 
-                                                                'dtree':False}):
-    
-    """
-    Summary
-    -------
-    Runs random forest model and decision tree if chosen and outputs regression metrics and feature importance
-    ----------
-    X_train: pandas DataFrame
-        dataframe of training features
-    X_test: pandas Series
-        dataframe of test features
-    y_train: pandas Series
-        series of training target variables
-    y_test: pandas Series
-        series of test target variables    
-    num_trees: integer
-        number of trees to use in RF model
-    criterion: string 'mse'/'mae'
-        criterion use to split nodes
-    max_depth: integer
-        maximum depth of trees
-    dtree: boolean
-        generate decision tree option
-    
-    Returns
-    -------
-    
-    model: sklearn model object
-        fitted RF model
-    pred: pandas Series
-        model predictions for plotting
-    
-    Example
-    --------
-    RF_mdl,predictions=run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
-    
-    """
-
-    #set up metrics dataframe
-    
-    fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
-
-    if RF_options['dtree']==True:
-
-            #Fit decision Tree
-
-            dtree_model = DecisionTreeRegressor(criterion = RF_options['criterion'], max_depth= RF_options['max_depth'])
-            dtree_model.fit(X_train,y_train)
-
-            #Predicting using decision tree
-
-            dtree_pred = dtree_model.predict(X_test)
-
-            #Fill dataframe with metrics
-
-            mape = np.mean(np.abs((y_test - dtree_pred) / np.abs(y_test)))
-
-            fit_metrics['D_Tree Metrics'] = [metrics.mean_absolute_error(y_test, dtree_pred),
-                                             metrics.mean_squared_error(y_test, dtree_pred),
-                                             np.sqrt(metrics.mean_squared_error(y_test, dtree_pred)),
-                                             round(mape * 100, 2),
-                                             round(100*(1 - mape), 2), 'N/A', 
-                                             dtree_model.score(X_train,y_train),
-                                             dtree_model.score(X_test,y_test)]
-
-    #Fit Model
-        
-    model = RandomForestRegressor(n_estimators=RF_options['num_trees'], 
-                                  criterion = RF_options['criterion'], 
-                                  max_depth=RF_options['max_depth'],
-                                  oob_score = True)
-    
-    model.fit(X_train, y_train)
-
-    #Predicting using random forest
-
-    pred = model.predict(X_test)
-
-    #Fill dataframe with metrics
-
-    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
-
-  
-
-    fit_metrics['RF Metrics'] = [metrics.mean_absolute_error(y_test, pred),
-                                 metrics.mean_squared_error(y_test, pred),
-                                 np.sqrt(metrics.mean_squared_error(y_test, pred)),
-                                 round(mape * 100, 2),round(100*(1 - mape), 2),
-                                 model.oob_score_,model.score(X_train,y_train),
-                                 model.score(X_test,y_test)]
-    
-    #Output feature importance
-    
-    Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X_train.columns}).sort_values(by='Importance', ascending=False)
-    Importance = Importance.reset_index()
-    Importance = Importance.drop('index',axis=1)
-
-    #plt.figure(figsize=(20,5))
-    #sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[1:11].sort_values('Importance',ascending=False).Feature,color='b')
-    #plt.xlabel('Asset',fontsize=18)
-    #plt.xticks(fontsize=18)
-
-    print('Feature Importance Ranking: \n \n',Importance.head(10))
-    print('\nRegression Metrics: \n \n', fit_metrics,'\n')
-    
-    return model,pred
-
-def run_XGB_model(X_train, X_test, y_train, y_test,XGB_options = {'num_trees': 100, 
-                                                                'max_depth':None}):
-    
-    """
-    Summary
-    -------
-    Runs random forest model and decision tree if chosen and outputs regression metrics and feature importance
-    ----------
-    X_train: pandas DataFrame
-        dataframe of training features
-    X_test: pandas Series
-        dataframe of test features
-    y_train: pandas Series
-        series of training target variables
-    y_test: pandas Series
-        series of test target variables    
-    num_trees: integer
-        number of trees to use in RF model
-    criterion: string 'mse'/'mae'
-        criterion use to split nodes
-    max_depth: integer
-        maximum depth of trees
-    dtree: boolean
-        generate decision tree option
-    
-    Returns
-    -------
-    
-    model: sklearn model object
-        fitted RF model
-    pred: pandas Series
-        model predictions for plotting
-    
-    Example
-    --------
-    RF_mdl,predictions=run_RF_model(X_train, X_test, y_train, y_test,num_trees=100, criterion = 'mse', max_depth=None, dtree=False):
-    
-    """
-
-    #set up metrics dataframe
-    
-    fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','OOB','R2_Train','R2_Pred'])
-
-        
-    model = XGBRegressor(n_estimators=XGB_options['num_trees'], max_depth=XGB_options['max_depth'])
-    
-    model.fit(X_train, y_train)
-
-    #Predicting using random forest
-
-    pred = model.predict(X_test)
-
-    #Fill dataframe with metrics
-
-    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
-
-  
-
-    fit_metrics['XGB Metrics'] = [metrics.mean_absolute_error(y_test, pred),
-                                 metrics.mean_squared_error(y_test, pred),
-                                 np.sqrt(metrics.mean_squared_error(y_test, pred)),
-                                 round(mape * 100, 2),round(100*(1 - mape), 2),
-                                 'N/A' ,model.score(X_train,y_train),
-                                 model.score(X_test,y_test)]
-    
-    #Output feature importance
-    
-    Importance = pd.DataFrame({'Importance': model.feature_importances_,'Feature':X_train.columns}).sort_values(by='Importance', ascending=False)
-    Importance = Importance.reset_index()
-    Importance = Importance.drop('index',axis=1)
-
-    #plt.figure(figsize=(20,5))
-    #sns.barplot(data = Importance, x= 'Feature', y='Importance', order=Importance[1:11].sort_values('Importance',ascending=False).Feature,color='b')
-    #plt.xlabel('Asset',fontsize=18)
-    #plt.xticks(fontsize=18)
-
-    print('Feature Importance Ranking: \n \n',Importance.head(10))
-    print('\nRegression Metrics: \n \n', fit_metrics,'\n')
-    
-    return model,pred,Importance
-
-
-
 def run_LR_model(X_train, X_test, y_train, y_test, **kwargs):
     
     """
@@ -362,56 +166,6 @@ def run_LR_model(X_train, X_test, y_train, y_test, **kwargs):
     
     return model, pred, Coeff, fit_metrics
     
-def select_features(X, y, model, **kwargs):
-    
-    """
-    Summary
-    -------
-    Selects most important features and returns selected features dataframe
-    ----------
-    X: pandas DataFrame
-        dataframe of features
-    X_train: pandas DataFrame
-        dataframe of training features
-    y_train: pandas Series
-        series of training target variables
-    model: sklearn model object
-        fitted linear regression model
-    thres: string 'mean'/'median'
-        threshold criterion for selecting features
-    
-    Returns
-    -------
-    
-    X_sel: pandas DataFrame
-        dataframe of selected features
-    
-    Example
-    --------
-    X_sel=select_features(X, X_train, y_train, model, thres = 'median')
-    
-    """
-    
-    X = X.copy()
-    y = y.copy()
-    
-    #Reducing Demensionality
-
-    #Fit select model
-
-    sel = SelectFromModel(estimator = model, **kwargs).fit(X,y)
-
-    #Set selected features
-
-    selected_feat = X.columns[(sel.get_support())]
-
-    print('\nNumber of Selected Features:' + str(len(selected_feat)) ,'\n')
-
-    #Reduce number of features
-
-    X_sel = X[selected_feat]
-    
-    return X_sel
 
 def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = None):
     
@@ -456,38 +210,30 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     
     return scores.mean(), df_cross_val
 
-
-'-------------------------------------------------------------------------------------------------------------------------------------- '   
+def find_features(X_train, y_train, n):
+    X_train = X_train.copy()
     
-def fit_n_r2(X, y, model_type, **kwargs):
-    """
-    Summary
-    -------
-    Takes variables and fits model with arguments. Return model object.
-    Parameters
-    ----------
-    X: pandas DataFrame
-        dataframe of features
-    Y: pandas Series
-        series of target variables
-    model_type: ModelClass
-        model that we wish to test
+    max_p = 1
+    while max_p > 0.1:
+        model = sm.OLS(y_train, X_train)
+        results = model.fit()
+        top_n = results.pvalues.sort_values(ascending=False).head(n)
+        max_p = top_n.tail(1).values[0]
+        rm_col = list(results.pvalues.sort_values(ascending=False).head(n).index)
+        X_train = X_train.drop(rm_col, axis=1)
+    return X_train.columns
 
-    Returns
-    -------
-    model: ModelClass
-        fitted model
-    scores: list
-        list of r2 values from cross-validation
-    Example
-    --------
-    model, r2_scores = fit_n_r2((X, y, LinearRegression))
-    """
-    model = model_type(**kwargs)
-    folds = KFold(n_splits = 5, shuffle = True, random_state = 100)
-    scores = cross_val_score(model, X, y, scoring='r2', cv=folds)
+def run_OLS(X_train,y_train,X_test,y_test, n):
 
-    return model, scores
+    Linear_mdl = run_LR_model(X_train, X_test, y_train, y_test, fit_intercept=False)
 
+    keep_features = find_features(X_train = X_train , y_train=y_train, n=n)
 
+    model = sm.OLS(y_train, X_train[keep_features])
+    results = model.fit()
 
+    print(len(keep_features))
+
+    cv_R2 = cross_validate_r2(Linear_mdl, X_train[keep_features], y_train)
+
+    print(results.summary())
