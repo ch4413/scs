@@ -203,10 +203,10 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     df_cross_val = pd.DataFrame(index = [str(i) for i in range(1,n_folds+1)]+['Mean','STD'])       
      
     folds = KFold(n_splits = n_folds, shuffle = shuffle, random_state = random_state)
-    scores = cross_val_score(model, X, y, scoring='r2', cv=folds)    
+    scores = cross_val_score(estimator = model,X = X,y = y, scoring='r2', cv=folds)    
     df_cross_val[' R2 Scores'] = np.append(scores,[scores.mean(),scores.std()])
         
-    print('\nCross Validation Scores ' + str(model) + ': \n \n', df_cross_val)
+    print('\nCross Validation Scores: \n \n', df_cross_val)
     
     return scores.mean(), df_cross_val
 
@@ -225,7 +225,7 @@ def find_features(X_train, y_train, n):
 
 def run_OLS(X_train,y_train,X_test,y_test, n):
 
-    Linear_mdl = run_LR_model(X_train, X_test, y_train, y_test, fit_intercept=False)
+    Linear_mdl = run_LR_model(X_train, X_test, y_train, y_test) #fit_intercept=False)
 
     keep_features = find_features(X_train = X_train , y_train=y_train, n=n)
 
@@ -233,7 +233,6 @@ def run_OLS(X_train,y_train,X_test,y_test, n):
     results = model.fit()
 
     print(len(keep_features))
+    print(results.summary())
 
     cv_R2 = cross_validate_r2(Linear_mdl, X_train[keep_features], y_train)
-
-    print(results.summary())
