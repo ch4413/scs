@@ -137,7 +137,7 @@ def run_LR_model(X_train, X_test, y_train, y_test, **kwargs):
     
     model.fit(X_train, y_train)
 
-    #Predicting using random forest
+    #Predicting using model
 
     pred = model.predict(X_test)
 
@@ -208,7 +208,7 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
         
     print('\nCross Validation Scores: \n \n', df_cross_val)
     
-    return scores.mean(), df_cross_val
+    return scores.mean()
 
 def find_features(X_train, y_train, n):
     X_train = X_train.copy()
@@ -225,14 +225,23 @@ def find_features(X_train, y_train, n):
 
 def run_OLS(X_train,y_train,X_test,y_test, n):
 
-    Linear_mdl = run_LR_model(X_train, X_test, y_train, y_test) #fit_intercept=False)
+    Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train, X_test, y_train, y_test) #fit_intercept=False)
 
     keep_features = find_features(X_train = X_train , y_train=y_train, n=n)
 
     model = sm.OLS(y_train, X_train[keep_features])
     results = model.fit()
 
+    cv_R2 = cross_validate_r2(model = Linear_mdl, X = X_train[keep_features], y = y_train)
+
     print(len(keep_features))
     print(results.summary())
 
-    cv_R2 = cross_validate_r2(Linear_mdl, X_train[keep_features], y_train)
+    negs = results.params[results.params < 0]
+    Coefficients = pd.DataFrame(negs, columns=['Coefficient']).reset_index()
+
+    Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train[keep_features], X_test[keep_features], y_train, y_test) #fit_intercept=False)
+    
+    R2_OOS = Linear_mdl.score(X_test[keep_features],y_test)
+
+    return cv_R2,R2_OOS,Coefficients
