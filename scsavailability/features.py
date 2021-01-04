@@ -553,7 +553,7 @@ def create_PTT_df(fa_floor,at,av,**kwargs):
         df = merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg , agg_level = 'Module')
         
         df_PTT = pd.concat([df_PTT,df],axis=0,join='outer')
-        fa_PTT.append(fa_agg)
+        fa_PTT.append(fa_sel)
     
     df_PTT = df_PTT.fillna(0) 
     
