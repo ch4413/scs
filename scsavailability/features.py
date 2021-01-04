@@ -7,15 +7,6 @@ import numpy as np
 from . import logger
 import pkg_resources
 
-def create_totes_features(totes_data):
-
-    return None
-
-
-def create_scs_features(scs_data):
-
-    return None
-
 @logger.logger
 def load_module_lookup():
     """Return a dataframe about the 68 different Roman Emperors.
@@ -165,7 +156,8 @@ def pre_process_av(av):
 def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
     fa.columns = pd.Series(fa.columns).str.strip()
-    fa.rename(columns = {fa.columns[2]:'timestamp'},inplace = True)
+    fa.reset_index(inplace=True)
+    fa.rename(columns = {fa.columns[3]:'timestamp','index':'Alert ID'},inplace = True)
 
     #Assign PLC code to Quadrants
     Quad_1 = ['C0' + str(i) for i in range(5,8)]  + ['SCSM0' + str(i) for i in range(1,6)]
@@ -260,6 +252,8 @@ def floor_shift_time_fa(fa,shift=0):
     
     fa_floor = fa.copy()
     
+    fa_floor['Original_timestamp'] = fa_floor['timestamp']
+
     #Shifts entry time by desired amount
     
     fa_floor['timestamp'] = fa_floor['timestamp'].apply(lambda x:x+pd.to_timedelta(shift,unit='m'))
@@ -279,14 +273,21 @@ def floor_shift_time_fa(fa,shift=0):
     fa_floor['Counts'] = fa_floor.groupby(['Number','Hours','timestamp']).cumcount()
     
     fa_floor['timestamp'] = fa_floor['Start'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
+
+    fa_floor['Original_timestamp'] = fa_floor['Original_timestamp'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
+
     
     fa_floor.reset_index(inplace=True,drop=True)
        
     for i in fa_floor.index:
 
+        if fa_floor['Counts'][i]> 0:
+            fa_floor['Original_timestamp'][i] = fa_floor['Original_timestamp'][i].floor('H')
+
         if fa_floor['Counts'][i] ==  0 and (fa_floor['Duration'][i] + fa_floor['Time Passed'][i])>3600:
             fa_floor['Duration'][i] = fa_floor['Time Left'][i]
             fa_floor['Duration'][i+1] = fa_floor['Duration'][i+1] - fa_floor['Duration'][i]
+
         elif fa_floor['Counts'][i] !=  0 and fa_floor['Duration'][i]>3600:
             fa_floor['Duration'][i+1] = fa_floor['Duration'][i] - 3600
             fa_floor['Duration'][i] =3600
@@ -555,6 +556,8 @@ def create_PTT_df(fa_floor,at,av,**kwargs):
         df_PTT = pd.concat([df_PTT,df],axis=0,join='outer')
         fa_PTT.append(fa_sel)
     
+    fa_PTT = dict(zip(pick_stations, fa_PTT))
+
     df_PTT = df_PTT.fillna(0) 
     
     totes_col = df_PTT.pop('TOTES')
