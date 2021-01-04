@@ -1,11 +1,21 @@
 import pandas as pd
 from datetime import datetime
 
+def create_output(fa_PTT,Coeff):
+
+    Output = pd.DataFrame(columns = ['Alert ID','Alert','Fault ID','Asset Code','Tote Colour','Quadrant','MODULE','Original_timestamp'])
+    for x in fa_PTT.items():
+        df = x[1].merge(Coeff,how = "inner",on="Asset Code")
+        df[str(x[0])] = df['Coefficient'] * df['Duration'] * -3600
+        df.drop(['Number','timestamp','PLC','Desk','Duration','Loop','Suffix','PLCN','Alert Type','Pick Station','Coefficient'],axis=1,inplace=True)
+        Output = Output.merge(df,how='outer',on=['Alert ID','Alert','Fault ID','Asset Code','Tote Colour','Quadrant','MODULE','Original_timestamp'])
+    Output.fillna(0,inplace=True)
+
+    return Output
 
 
 
-
-def create_output(config, fit_metrics, Coeff, cv_R2):
+def create_excel(config, fit_metrics, Coeff, cv_R2):
     """
     Summary
     -------

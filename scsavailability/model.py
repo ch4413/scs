@@ -239,6 +239,7 @@ def run_OLS(X_train,y_train,X_test,y_test, n):
 
     negs = results.params[results.params < 0]
     Coefficients = pd.DataFrame(negs, columns=['Coefficient']).reset_index()
+    Coefficients.rename(columns = {'index':'Asset Code'},inplace = True)
 
     Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train[keep_features], X_test[keep_features], y_train, y_test) #fit_intercept=False)
     
