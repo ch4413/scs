@@ -13,7 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def gen_feat_var(df,target = "Downtime",features = ["Faults","Totes"]):
+def gen_feat_var(df,target = "Availability",features = ["Faults","Totes"]):
     
     """
     Summary
