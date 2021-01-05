@@ -48,7 +48,7 @@ def gen_feat_var(df,target = "Availability",features = ["Faults","Totes"]):
         
     elif "Totes" in features:
          
-        X = pd.DataFrame(df['TOTES'])
+        X = pd.DataFrame(df['log_totes'])
         
     else:
         

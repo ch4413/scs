@@ -78,43 +78,27 @@ def run(config):
 
     at = pd.read_csv(config.path.totes)
     av = pd.read_csv(config.path.availability)
-    fa = pd.read_csv(config.path.faults)
-    # Need to fold into pre-processing
-    fa = feat.add_code(fa)
-    fa, unmapped = feat.add_tote_colour(fa)
+    scs_raw = pd.read_csv(config.path.faults)
 
     at = feat.pre_process_AT(at)
     av = feat.pre_process_av(av)
-    fa = feat.preprocess_faults(fa, remove_same_location_faults = True)
+    fa,unmapped = feat.preprocess_faults(scs_raw, remove_same_location_faults = True)
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
-    fa_sel = feat.fault_select(fa_floor, fault_select_options = config.features.fault_select_options)
-    fa_sel = feat.get_data_faults(fa_sel, modules = config.features.filter_select_options.Module)
-    
-    fa_agg = feat.faults_aggregate(fa_sel,fault_agg_level= config.features.aggregation, agg_type = 'count')
-
-    av_sel,at_sel = feat.av_at_select(av, at, remove_high_AT = True, availability_select_options = config.features.filter_select_options)
-
-    av_agg = feat.aggregate_availability(av_sel, agg_level = config.features.aggregation)
-    at_agg = feat.aggregate_totes(at_sel, agg_level = config.features.aggregation)
-
-    df = feat.merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg, agg_level = config.features.aggregation)
+    df,fa_PTT = feat.create_PTT_df(fa_floor,at,av)
+    df = feat.log_totes(df) 
 
     # Features
     X,y = md.gen_feat_var(df, target = config.model.target)
-    y=1-y
     X_train, X_test, y_train, y_test = md.split(X,y)
 
     # # Model
-    Linear_mdl, predictions_LM, Coeff, fit_metrics = md.run_LR_model(X_train, X_test, y_train, y_test)
-    X_sel_lm = md.select_features(X, y, Linear_mdl, **config.model.selection_options)
-    cv_R2 = md.cross_validate_r2(Linear_mdl, X_sel_lm, y, n_folds = 10, shuffle = True, random_state = 101)
+    
+    R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 5)
+    Output = rt.create_output(fa_PTT,Coeff)
 
-    rt.create_output(config, fit_metrics, Coeff, cv_R2[1])
-
-    print(sc.lm_coefficients(Linear_mdl, X, y))
-
+    return Output, R2_cv, R2_OOS
 
 if __name__ == '__main__':
     print('running with config')
