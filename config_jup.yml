@@ -1,0 +1,43 @@
+features:
+  agg_type: count
+  aggregation: None
+  duration_thres: 1
+  fault_grouping: code
+  fault_select_options:
+    Tote Colour:
+    - Blue
+  filter_select_options:
+    Module:
+    - 3
+  max_date: None
+  min_date: None
+  remove_high_AT: 'True'
+  same_location_fault: 'True'
+  shift: 0
+  weights:
+  - 1
+  - 0.5
+  - 0.25
+model:
+  RF_options:
+    criterion: mse
+    dtree: false
+    max_depth: None
+    num_trees: 100
+  XGB_options:
+    max_depth: None
+    num_trees: 100
+  features:
+  - Totes
+  - Faults
+  selection_options:
+    threshold: mean
+  split_options:
+    random_state: None
+    test_size: 0.2
+  target: Downtime
+path:
+  availability: raw_data/Availability_with_Grey&Blue_1811-2511.csv
+  faults: raw_data/SCS alerts Nov.csv
+  save: raw_data/results
+  totes: raw_data/active_totes_20201123.csv
