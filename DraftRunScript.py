@@ -11,7 +11,7 @@ scs_raw = pd.read_csv(path + 'Faults20_11-10_12.csv')
 
 at = feat.pre_process_AT(at)
 av = feat.pre_process_av(av)
-fa,unmapped = feat.preprocess_faults(scs_raw,remove_same_location_faults = True)
+fa,unmapped,end_time = feat.preprocess_faults(scs_raw,remove_same_location_faults = True)
 
 fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
@@ -23,5 +23,6 @@ X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.
                                                                  'random_state': None})
 R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 5)
 
-Output = rs.create_output(fa_PTT,Coeff)
+Output = rs.create_output(fa_PTT,Coeff,end_time)
 
+Output.to_csv('Output.csv')

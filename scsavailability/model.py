@@ -226,7 +226,7 @@ def find_features(X_train, y_train, n):
 def run_OLS(X_train,y_train,X_test,y_test, n):
 
     Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train, X_test, y_train, y_test) #fit_intercept=False)
-
+    
     keep_features = find_features(X_train = X_train , y_train=y_train, n=n)
 
     model = sm.OLS(y_train, X_train[keep_features])

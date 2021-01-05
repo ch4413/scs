@@ -154,8 +154,6 @@ def pre_process_av(av):
 @logger.logger
 def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
-
-
     fa.columns = pd.Series(fa.columns).str.strip()
 
     fa = add_code(fa)
@@ -238,8 +236,10 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0]
     fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert'].str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', '')
     print('HOTFIX: Quadrant only faults, PTT Asset Code update')
+    
+    end_time = fa['timestamp'].max()
 
-    return fa,unmapped
+    return fa,unmapped, end_time
 
 def floor_shift_time_fa(fa,shift=0):
     '''
@@ -348,7 +348,7 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
    
     return df 
 
-def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None"):
+def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None",**kwargs):
 
     av = av.copy()
     at = at.copy()
@@ -534,7 +534,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         
     return df   
 
-def create_PTT_df(fa_floor,at,av,**kwargs):
+def create_PTT_df(fa_floor,at,av,weights = [1],**kwargs):
     
     pick_stations = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052','PTT071','PTT072','PTT081','PTT082','PTT091','PTT092','PTT101','PTT102','PTT111','PTT112','PTT121','PTT122','PTT131','PTT132','PTT141','PTT142','PTT151','PTT152','PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
     df_PTT = pd.DataFrame()
@@ -550,7 +550,7 @@ def create_PTT_df(fa_floor,at,av,**kwargs):
         
         fa_sel = get_data_faults(fa_floor, modules=[module],PTT = PTT)                                                        
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
-        fa_agg = weight_hours(df = fa_agg, **kwargs)
+        fa_agg = weight_hours(df = fa_agg, weights = weights)
         
 
         av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = True, AT_limit = 'None')
