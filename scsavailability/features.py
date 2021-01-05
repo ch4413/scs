@@ -676,3 +676,26 @@ def get_data_faults(data, modules, PTT = 'None'):
         faults_mod = faults_mod[faults_mod['Pick Station'].isin([PTT,False])]
 
     return faults_mod
+
+def log_totes(df):
+    """
+    Summary
+    -------
+    Takes features DataFrame, removes low TOTES, takes the natural log and drops the
+    original TOTES column. 
+    ----------
+    df: pandas DataFrame
+        dataframe of features
+    Returns
+    -------
+    df: pandas DataFrame
+        dataframe with 'log_totes' column
+    Example
+    --------
+    df_log = log_totes(data)
+    """
+    df = df[df['TOTES'] > 5]
+    df['log_totes'] = np.log(df['TOTES'])
+    df = df.drop(['TOTES'], axis=1)
+    
+    return df
