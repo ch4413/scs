@@ -114,10 +114,9 @@ def pre_process_av(av):
     Note: function will need to be adapated to preprocess availability data from other months
     '''
     
-    #convert to percentage downtime
+    #Rename time column
     
-    av['Availability'] = 1 - av['Availability']
-    av.rename(columns = {'Availability':'Downtime',av.columns[0]:'timestamp'},inplace = True)
+    av.rename(columns = {av.columns[0]:'timestamp'},inplace = True)
 
     #Assign Pick Station to Quadrant
     Quad_1 = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052']
@@ -155,7 +154,13 @@ def pre_process_av(av):
 @logger.logger
 def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
+
+
     fa.columns = pd.Series(fa.columns).str.strip()
+
+    fa = add_code(fa)
+    fa, unmapped = add_tote_colour(fa)
+
     fa.reset_index(inplace=True)
     fa.rename(columns = {fa.columns[3]:'timestamp','index':'Alert ID'},inplace = True)
 
@@ -233,7 +238,8 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0]
     fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert'].str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', '')
     print('HOTFIX: Quadrant only faults, PTT Asset Code update')
-    return fa
+
+    return fa,unmapped
 
 def floor_shift_time_fa(fa,shift=0):
     '''
@@ -414,9 +420,9 @@ def aggregate_availability(df, agg_level = 'None'):
    
     if agg_level == 'None':
     
-        df = df.groupby(['timestamp'],as_index=False).agg({'Downtime':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
+        df = df.groupby(['timestamp'],as_index=False).agg({'Availability':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
     else:
-        df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Downtime':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
+        df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Availability':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
         
     df = df.set_index('timestamp')
 #    print('Availability data aggregated')
@@ -504,7 +510,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
     if agg_level == 'None':
 
     
-        av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
+        av_df = av_df[["Availability","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
         
 
         df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
@@ -515,7 +521,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
 
     if agg_level != 'None':
         
-        av_df = av_df[["Downtime","Blue Tote Loss","Grey Tote Loss", agg_level]].loc[min_date:max_date]
+        av_df = av_df[["Availability","Blue Tote Loss","Grey Tote Loss", agg_level]].loc[min_date:max_date]
         
         av_df.reset_index(inplace=True)
         at_df.reset_index(inplace=True)
