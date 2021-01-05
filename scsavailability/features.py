@@ -553,7 +553,7 @@ def create_PTT_df(fa_floor,at,av,**kwargs):
         fa_agg = weight_hours(df = fa_agg, **kwargs)
         
 
-        av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = False, AT_limit = 60)
+        av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = True, AT_limit = 'None')
         av_agg = aggregate_availability(av_sel, agg_level = 'Module')
         at_agg = aggregate_totes(at_sel, agg_level = 'Module')
 
