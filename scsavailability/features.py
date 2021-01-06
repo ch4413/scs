@@ -237,6 +237,10 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert'].str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', '')
     print('HOTFIX: Quadrant only faults, PTT Asset Code update')
     
+    #Drop ECB Faults
+
+    fa = fa[~fa['PLC'].isin(['C17','SCSM22'])]
+
     end_time = fa['timestamp'].max()
 
     return fa,unmapped, end_time
