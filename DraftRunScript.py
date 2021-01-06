@@ -17,11 +17,12 @@ fa_floor = feat.floor_shift_time_fa(fa, shift=0)
 
 df,fa_PTT = feat.create_PTT_df(fa_floor,at,av)
 df = feat.log_totes(df) 
+df_week = df[df['timestamp']>end_time - pd.to_timedelta(7, unit='D')]
 
 X,y = md.gen_feat_var(df,target = 'Availability', features = ['Totes','Faults'])
 X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.3,
                                                                  'random_state': None})
-R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 5)
+R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 20)
 
 Output = rs.create_output(fa_PTT,Coeff,end_time)
 
