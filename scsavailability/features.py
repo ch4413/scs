@@ -538,7 +538,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         
     return df   
 
-def create_PTT_df(fa_floor,at,av,weights = None,**kwargs):
+def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
     
     pick_stations = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052','PTT071','PTT072','PTT081','PTT082','PTT091','PTT092','PTT101','PTT102','PTT111','PTT112','PTT121','PTT122','PTT131','PTT132','PTT141','PTT142','PTT151','PTT152','PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
     df_PTT = pd.DataFrame()
@@ -550,8 +550,9 @@ def create_PTT_df(fa_floor,at,av,weights = None,**kwargs):
         
         fa_floor = fa_floor.copy()
         
-        #fa_floor['Duration'] = np.log10(fa_floor['Duration']) + 1
+        fa_floor['Duration'] = np.log(fa_floor['Duration'])+1
         
+        fa_sel = fault_select(fa_floor, fault_select_options='None',duration_thres = duration_thres)
         fa_sel = get_data_faults(fa_floor, modules=[module],PTT = PTT)                                                        
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
         if weights!=None:
@@ -704,6 +705,8 @@ def log_totes(df):
     --------
     df_log = log_totes(data)
     """
+    df = df.copy()
+
     df = df[df['TOTES'] > 5]
     df['log_totes'] = np.log(df['TOTES'])
     df = df.drop(['TOTES'], axis=1)
