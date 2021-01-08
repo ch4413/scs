@@ -24,11 +24,11 @@ def create_output(fa_PTT,Coeff, end_time, speed = 470, picker_present = 0.91, av
     return Output
 
 
-def run_single_model(at,av,fa,end_time,shift,weights,duration_thres,speed,picker_present,availability):
+def run_single_model(at,av,fa,end_time,shift,weights,speed,picker_present,availability):
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=shift)
 
-    df,fa_PTT = feat.create_PTT_df(fa_floor,at,av,weights=weights,duration_thres= duration_thres)
+    df,fa_PTT = feat.create_PTT_df(fa_floor,at,av,weights=weights)
     df = feat.log_totes(df) 
     df_2week = df[df['timestamp']>end_time - pd.to_timedelta(14, unit='D')]
 
@@ -36,7 +36,7 @@ def run_single_model(at,av,fa,end_time,shift,weights,duration_thres,speed,picker
     X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.3,
                                                                     'random_state': None})
 
-    R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 10)
+    R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 30)
 
     Output = rs.create_output(fa_PTT,Coeff,end_time,speed = speed, picker_present = picker_present, availability = availability)
 
