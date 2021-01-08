@@ -11,7 +11,7 @@ import re
 import yaml
 
 import scsavailability as scs
-from scsavailability import features as feat, model as md, plotting as pt, results as rt, score as sc
+from scsavailability import features as feat, model as md, plotting as pt, results as rs, score as sc
 
 def parse_config(path=None, data=None, tag='!ENV'):
     """
@@ -77,28 +77,37 @@ def run(config):
     """
 
     at = pd.read_csv(config.path.totes)
-    av = pd.read_csv(config.path.availability)
+    av = pd.read_csv(config.path.availability,names = ["timestamp","Pick Station","Availability","Blue Tote Loss","Grey Tote Loss"])
     scs_raw = pd.read_csv(config.path.faults)
+
+    speed = config.parameters.speed
+    picker_present = config.parameters.picker_present
+    availability = config.parameters.availability
+
+    print(speed)
+    print(picker_present)
+    print(availability)
 
     at = feat.pre_process_AT(at)
     av = feat.pre_process_av(av)
-    fa,unmapped = feat.preprocess_faults(scs_raw, remove_same_location_faults = True)
+    fa, unmapped, end_time = feat.preprocess_faults(scs_raw)
 
-    fa_floor = feat.floor_shift_time_fa(fa, shift=0)
+    Shift = [0,0,0,10,10,10,20,20,20]
+    Weights = [[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
+    Outputs = dict()
 
-    df,fa_PTT = feat.create_PTT_df(fa_floor,at,av)
-    df = feat.log_totes(df) 
+    for i in range(len(Shift)):
 
-    # Features
-    X,y = md.gen_feat_var(df, target = config.model.target)
-    X_train, X_test, y_train, y_test = md.split(X,y)
+        Output, R2 = rs.run_single_model(at,av,fa,end_time,shift=Shift[i],weights=Weights[i],speed=speed,picker_present=picker_present,availability=availability)
 
-    # # Model
-    
-    R2_cv,R2_OOS,Coeff = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 5)
-    Output = rt.create_output(fa_PTT,Coeff)
+        Outputs[R2] = Output
 
-    return Output, R2_cv, R2_OOS
+    print('Selected R2:', max(k for k, v in Outputs.items()))
+
+    Output = Outputs[max(k for k, v in Outputs.items())]
+
+    Output.to_csv(config.path.save, index_col = False)
+
 
 if __name__ == '__main__':
     print('running with config')

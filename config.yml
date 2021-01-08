@@ -1,11 +1,11 @@
 path:
     totes: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/active_totes_20201210.csv'
-    availability: 'Availability_with_Grey&Blue_1811-0912.csv'
-    faults: 'Faults20_11-10_12.csv'
-    save: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results'
+    availability: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Availability_with_Grey&Blue_1811-0912.csv'
+    faults: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Faults20_11-10_12.csv'
+    save: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results/Output_JDog.csv'
 
-features:
-    shift: 0
-    duration_thres: 1
-    weights: [1,0.5,0.25],[1,0.5]
+parameters:
+    speed: 470
+    picker_present: 0.91
+    availability: 0.71
 

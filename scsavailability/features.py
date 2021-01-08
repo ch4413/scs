@@ -243,7 +243,7 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
 
     end_time = fa['timestamp'].max()
 
-    return fa,unmapped, end_time
+    return fa, unmapped, end_time
 
 def floor_shift_time_fa(fa,shift=0):
     '''
@@ -270,9 +270,9 @@ def floor_shift_time_fa(fa,shift=0):
   
     fa_floor.sort_values('Duration',ascending=False,inplace=True)
     
-    fa_floor['End'] = fa_floor['timestamp'].dt.ceil('H')
     fa_floor['Start'] = fa_floor['timestamp'].dt.floor('H')
-    
+    fa_floor['End'] = fa_floor['Start'].apply(lambda x:x+pd.to_timedelta(1,unit='h'))
+
     fa_floor['Time Passed'] =pd.to_timedelta(fa_floor['timestamp']-fa_floor['Start']).dt.total_seconds()
     fa_floor['Time Left'] =pd.to_timedelta(fa_floor['End']-fa_floor['timestamp']).dt.total_seconds()
     
@@ -285,22 +285,21 @@ def floor_shift_time_fa(fa,shift=0):
     fa_floor['timestamp'] = fa_floor['Start'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
 
     fa_floor['Original_timestamp'] = fa_floor['Original_timestamp'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
-
     
     fa_floor.reset_index(inplace=True,drop=True)
        
     for i in fa_floor.index:
 
         if fa_floor['Counts'][i]> 0:
-            fa_floor['Original_timestamp'][i] = fa_floor['Original_timestamp'][i].floor('H')
+            fa_floor.loc[i,'Original_timestamp'] = fa_floor.loc[i,'Original_timestamp'].floor('H')
 
         if fa_floor['Counts'][i] ==  0 and (fa_floor['Duration'][i] + fa_floor['Time Passed'][i])>3600:
-            fa_floor['Duration'][i] = fa_floor['Time Left'][i]
-            fa_floor['Duration'][i+1] = fa_floor['Duration'][i+1] - fa_floor['Duration'][i]
+            fa_floor.loc[i,'Duration'] = fa_floor.loc[i,'Time Left']
+            fa_floor.loc[i+1,'Duration'] = fa_floor.loc[i+1,'Duration'] - fa_floor.loc[i,'Duration']
 
         elif fa_floor['Counts'][i] !=  0 and fa_floor['Duration'][i]>3600:
-            fa_floor['Duration'][i+1] = fa_floor['Duration'][i] - 3600
-            fa_floor['Duration'][i] =3600
+            fa_floor.loc[i+1,'Duration'] = fa_floor.loc[i,'Duration'] - 3600
+            fa_floor.loc[i,'Duration'] =3600
     
     fa_floor.sort_values('timestamp',ascending=True,inplace=True)
     
@@ -308,6 +307,8 @@ def floor_shift_time_fa(fa,shift=0):
     
     fa_floor.reset_index(inplace=True,drop=True)
     
+    fa_floor['Duration'] = np.log(fa_floor['Duration']) + 1
+
     return fa_floor
 
 
@@ -550,8 +551,6 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
         
         fa_floor = fa_floor.copy()
         
-        fa_floor['Duration'] = np.log(fa_floor['Duration'])+1
-        
         fa_sel = fault_select(fa_floor, fault_select_options='None',duration_thres = duration_thres)
         fa_sel = get_data_faults(fa_floor, modules=[module],PTT = PTT)                                                        
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
@@ -710,5 +709,8 @@ def log_totes(df):
     df = df[df['TOTES'] > 5]
     df['log_totes'] = np.log(df['TOTES'])
     df = df.drop(['TOTES'], axis=1)
-    
+
+    df.replace([np.inf, -np.inf], np.nan)
+    df.dropna(inplace=True)
+
     return df
