@@ -190,13 +190,10 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa['Desk_edit'] = fa['Desk']
     # Mark SCSs
     fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS', regex=True), 'PLC']
-    # fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS(?!\ M)', regex=True), 'Desk']
-    # fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'Desk_edit'] = fa.loc[fa['PLC'].str.contains(r'SCS\ M', regex=True), 'PLC']
     # Mark PTTs
     fa.loc[~(fa['Pick Station']==False), 'Desk_edit'] = fa[~(fa['Pick Station']==False)]['Pick Station'].apply(lambda x: x[:-1])
     # Set NA desk for outside stuff
     fa.loc[fa['PLC'].isin(['C23', 'C16', 'C15', 'C17']), 'Desk_edit'] = 'X'
-    #fa['PLCN'] = fa['PLC'].str.extract('((?<=C)[0-9]{2})')[0].astype('float')
     fa.loc[fa['PLCN'] > 34, 'Desk_edit'] = 'X'
     fa = pd.merge(fa, lu, how='left', on=['PLC', 'Desk_edit']).drop('Desk_edit', axis=1)
     fa['timestamp'] = pd.to_datetime(fa['timestamp'],dayfirst=True)
@@ -209,10 +206,11 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
   
     fa.drop('0 Merger',axis=1,inplace=True)
 
+    #drop rows that engineering have identified as warnings
+
     if remove_warnings == True:
 
         fa = fa[fa['Alert Type']!='Warning']
-
    
     #drop rows where there is no duration data
     fa = fa.dropna(subset = ['Duration'])
@@ -221,10 +219,11 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa['Duration'] = pd.to_timedelta(fa['Duration'].str.slice(start=2))
     fa['Duration'] = fa['Duration'].dt.total_seconds()
 
+    #Remove carousel door fault if over an hour
+
     if remove_door == True:             
          
         fa = fa[~((fa['Duration']>3600) & (fa['Alert'].str.contains('access door')))]
-
     
     #drop faults that happen at same time and in same location (keep only the one with max duration)
     if remove_same_location_faults == True:
@@ -235,7 +234,6 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
     fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains('PTT')]['Alert'].str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0]
     fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert'].str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', '')
-    print('HOTFIX: Quadrant only faults, PTT Asset Code update')
     
     #Drop ECB Faults
 
@@ -262,7 +260,7 @@ def floor_shift_time_fa(fa,shift=0):
     
     fa_floor = fa.copy()
     
-    fa_floor['Original_timestamp'] = fa_floor['timestamp']
+    fa_floor['Entry Time'] = fa_floor['timestamp']
 
     #Shifts entry time by desired amount
     
@@ -284,14 +282,14 @@ def floor_shift_time_fa(fa,shift=0):
     
     fa_floor['timestamp'] = fa_floor['Start'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
 
-    fa_floor['Original_timestamp'] = fa_floor['Original_timestamp'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
+    fa_floor['Entry Time'] = fa_floor['Entry Time'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
     
     fa_floor.reset_index(inplace=True,drop=True)
        
     for i in fa_floor.index:
 
         if fa_floor['Counts'][i]> 0:
-            fa_floor.loc[i,'Original_timestamp'] = fa_floor.loc[i,'Original_timestamp'].floor('H')
+            fa_floor.loc[i,'Entry Time'] = fa_floor.loc[i,'Entry Time'].floor('H')
 
         if fa_floor['Counts'][i] ==  0 and (fa_floor['Duration'][i] + fa_floor['Time Passed'][i])>3600:
             fa_floor.loc[i,'Duration'] = fa_floor.loc[i,'Time Left']
@@ -300,6 +298,8 @@ def floor_shift_time_fa(fa,shift=0):
         elif fa_floor['Counts'][i] !=  0 and fa_floor['Duration'][i]>3600:
             fa_floor.loc[i+1,'Duration'] = fa_floor.loc[i,'Duration'] - 3600
             fa_floor.loc[i,'Duration'] =3600
+    
+    fa_floor['End Time'] = fa_floor['Entry Time'] + fa_floor['Duration'].apply(lambda x:pd.to_timedelta(x,unit='s'))
     
     fa_floor.sort_values('timestamp',ascending=True,inplace=True)
     
@@ -310,7 +310,6 @@ def floor_shift_time_fa(fa,shift=0):
     fa_floor['Duration'] = np.log(fa_floor['Duration']) + 1
 
     return fa_floor
-
 
 def fault_select(data, fault_select_options='None',duration_thres = 0):
     
@@ -430,7 +429,7 @@ def aggregate_availability(df, agg_level = 'None'):
         df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Availability':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
         
     df = df.set_index('timestamp')
-#    print('Availability data aggregated')
+
     return(df)
 
 def aggregate_totes(active_totes, agg_level = 'None'):
@@ -552,7 +551,7 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
         fa_floor = fa_floor.copy()
         
         fa_sel = fault_select(fa_floor, fault_select_options='None',duration_thres = duration_thres)
-        fa_sel = get_data_faults(fa_floor, modules=[module],PTT = PTT)                                                        
+        fa_sel = get_data_faults(fa_sel, modules=[module],PTT = PTT)                                                        
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
         if weights!=None:
             fa_agg = weight_hours(df = fa_agg, weights = weights)
@@ -627,8 +626,14 @@ def add_tote_colour(scs_code):
     df_totes['PLCN'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
     df_totes.loc[df_totes['PLCN'] > 34, 'Tote Colour'] = 'Blue'
     
+    df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'Area'] = df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'PLC']
+    df_totes.loc[df_totes['Pick Station']!=False, 'Area'] = 'PTT'
+    df_totes.loc[df_totes['PLCN'] > 34, 'Area'] = 'Stacker/Destacker'
+    df_totes.loc[df_totes['Area'].isnull() * df_totes['Desk'] == 'Z', 'Area'] = 'PLC External'
+    df_totes['Area'] = df_totes['Area'].fillna('Fault Not Found')
+
     # Unmapped
-    unmapped = df_totes[df_totes['Tote Colour'].isna()]['Asset Code'].value_counts().reset_index().copy()
+    unmapped = df_totes[df_totes['Area'] == 'Fault Not Found']['Asset Code'].value_counts().reset_index().copy()
     unmapped = unmapped.rename(columns={'index' : 'Asset', 'Asset Code' : 'Occurrence'})
     # Map unknown to Both
     df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
