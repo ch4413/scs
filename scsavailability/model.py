@@ -1,11 +1,11 @@
-from sklearn.linear_model import LinearRegression
-from sklearn.feature_selection import SelectFromModel
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold
 from scipy import stats
 import statsmodels.api as sm
+from sklearn.base import BaseEstimator, RegressorMixin
 
 import pandas as pd
 import numpy as np
@@ -97,76 +97,6 @@ def split(X,y,split_options = {'test_size':0.3,
     
     return X_train, X_test, y_train, y_test
 
-def run_LR_model(X_train, X_test, y_train, y_test, **kwargs):
-    
-    """
-    Summary
-    -------
-    Runs linear regresion model and outputs regression metrics and feature coefficients
-    ----------
-    X_train: pandas DataFrame
-        dataframe of training features
-    X_test: pandas Series
-        dataframe of test features
-    y_train: pandas Series
-        series of training target variables
-    y_test: pandas Series
-        series of test target variables    
-    
-    Returns
-    -------
-    
-    model: sklearn model object
-        fitted linear regression model
-    pred: pandas Series
-        model predictions for plotting    
-    
-    Example
-    --------
-    Linear_mdl,predictions=run_LR_model(X_train, X_test, y_train, y_test):
-    
-    """
-    
-    #set up metrics dataframe
-    
-    fit_metrics = pd.DataFrame(index = ['MAE','MSE','RMSE','MAPE%','ACC%','R2_Train','R2_Pred'])
-    
-    #Fit Model
-    
-    model = LinearRegression(**kwargs)
-    
-    model.fit(X_train, y_train)
-
-    #Predicting using model
-
-    pred = model.predict(X_test)
-
-    #Fill dataframe with metrics
-
-    mape = np.mean(np.abs((y_test - pred) / np.abs(y_test)))
-
-    fit_metrics['LM Metrics'] = [metrics.mean_absolute_error(y_test, pred),
-                                 metrics.mean_squared_error(y_test, pred),
-                                 np.sqrt(metrics.mean_squared_error(y_test, pred)),
-                                 round(mape * 100, 2),
-                                 round(100*(1 - mape), 2),
-                                 model.score(X_train,y_train),
-                                 model.score(X_test,y_test)]
-    
-    #Output model coefficients
-
-    Coeff = pd.DataFrame({'Coefficients': model.coef_,'Feature':X_train.columns}).sort_values(by='Coefficients',ascending=False)
-    Coeff = Coeff.reset_index()
-    Coeff = Coeff.drop('index',axis=1)
-
-    #plt.figure(figsize=(20,5))
-    #sns.barplot(data = Coeff, x= 'Feature', y='Coefficients',order=Coeff[:10].sort_values('Coefficients').Feature,color='b')
-    #plt.xlabel('Feature',fontsize=18)
-    #plt.xticks(fontsize=18)
-    
-    return model, pred, Coeff, fit_metrics
-    
-
 def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = None):
     
     """
@@ -224,15 +154,28 @@ def find_features(X_train, y_train, n):
     return X_train.columns
 
 def run_OLS(X_train,y_train,X_test,y_test, n):
+     
+    class SMWrapper(BaseEstimator, RegressorMixin):
+        """ A universal sklearn-style wrapper for statsmodels regressors """
+        def __init__(self, model_class, fit_intercept=True):
+            self.model_class = model_class
+            self.fit_intercept = fit_intercept
+        def fit(self, X, y):
+            if self.fit_intercept:
+                X = sm.add_constant(X)
+            self.model_ = self.model_class(y, X)
+            self.results_ = self.model_.fit()
+        def predict(self, X):
+            if self.fit_intercept:
+                X = sm.add_constant(X)
+            return self.results_.predict(X)
 
-    Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train, X_test, y_train, y_test) #fit_intercept=False)
-    
     keep_features = find_features(X_train = X_train , y_train=y_train, n=n)
 
     model = sm.OLS(y_train, X_train[keep_features])
     results = model.fit()
    
-    cv_R2 = cross_validate_r2(model = Linear_mdl, X = X_train[keep_features], y = y_train)
+    cv_R2 = cross_validate_r2(model = SMWrapper(sm.OLS), X = X_train[keep_features], y = y_train)
 
     print(results.summary())
 
@@ -243,8 +186,9 @@ def run_OLS(X_train,y_train,X_test,y_test, n):
 
     Coefficients.rename(columns = {'index':'Asset Code'},inplace = True)
 
-    Linear_mdl,pred, Coeff, fit_metrics = run_LR_model(X_train[keep_features], X_test[keep_features], y_train, y_test) #fit_intercept=False)
-    
-    R2_OOS = Linear_mdl.score(X_test[keep_features],y_test)
+    OutY_Predicted = results.predict(X_test[keep_features])
+    R2_OOS = r2_score(y_test, OutY_Predicted)
+
+    print(R2_OOS)
 
     return cv_R2,R2_OOS,Coefficients

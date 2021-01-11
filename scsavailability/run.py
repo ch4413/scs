@@ -11,7 +11,7 @@ import re
 import yaml
 
 import scsavailability as scs
-from scsavailability import features as feat, model as md, plotting as pt, results as rs, score as sc
+from scsavailability import features as feat, model as md, results as rs
 
 def parse_config(path=None, data=None, tag='!ENV'):
     """
@@ -75,10 +75,28 @@ def run(config):
     :param config:
     :return:
     """
+    
+    data_source = config.path.source
 
-    at = pd.read_csv(config.path.totes)
-    av = pd.read_csv(config.path.availability,names = ["timestamp","Pick Station","Availability","Blue Tote Loss","Grey Tote Loss"])
-    scs_raw = pd.read_csv(config.path.faults)
+    if data_source == 'Local':
+
+        at = pd.read_csv(config.path.totes)
+        av = pd.read_csv(config.path.availability,names = ["timestamp","Pick Station","Availability","Blue Tote Loss","Grey Tote Loss"])
+        fa = pd.read_csv(config.path.faults)
+
+    if data_source == 'SQL':
+
+        def mi_db_connection(): 
+            import pyodbc
+            conn = pyodbc.connect('Driver={SQL Server};'
+                            'Server=MSHSRMNSUKP1405;'
+                            'Database=ODS;'
+                            'as_dataframe=True')
+            return conn
+
+        at = pd.read_sql(con=mi_db_connection(),sql=config.path.totes)
+        av = pd.read_sql(con=mi_db_connection(),sql=config.path.availability)
+        fa = pd.read_sql(con=mi_db_connection(),sql=config.path.faults)
 
     speed = config.parameters.speed
     picker_present = config.parameters.picker_present
@@ -90,7 +108,7 @@ def run(config):
 
     at = feat.pre_process_AT(at)
     av = feat.pre_process_av(av)
-    fa, unmapped, end_time = feat.preprocess_faults(scs_raw)
+    fa, unmapped, end_time = feat.preprocess_faults(fa)
 
     Shift = [0,0,0,10,10,10,20,20,20]
     Weights = [[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
@@ -106,7 +124,7 @@ def run(config):
 
     Output = Outputs[max(k for k, v in Outputs.items())]
 
-    Output.to_csv(config.path.save, index_col = False)
+    Output.to_csv(config.path.save, index = False)
 
 
 if __name__ == '__main__':
