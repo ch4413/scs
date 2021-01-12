@@ -5,7 +5,10 @@ All features work
 import pandas as pd
 import numpy as np
 from . import logger
+import os
 import pkg_resources
+
+os.environ['NUMEXPR_NUM_THREADS'] = '8'
 
 @logger.logger
 def load_module_lookup():
@@ -151,6 +154,73 @@ def pre_process_av(av):
     #print("Availability data pre-processed")
     return(av)
 
+
+def add_code(data):
+    """
+    Summary
+    -------
+    Takes variables and fits model with arguments. Return model object.
+    Parameters
+    ----------
+    data: pandas DataFrame
+        dataframe of features
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs = add_code(data)
+    """
+    scs = data.copy()
+    scs['Asset Code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
+    scs['Asset Code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
+    scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Asset Code'] = scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Desk']
+    scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
+    
+    return scs
+
+def add_tote_colour(scs_code):
+    """
+    Summary
+    -------
+    Takes variables and fits model with arguments. Return model object.
+    Parameters
+    ----------
+    scs_code: pandas DataFrame
+        dataframe of features
+    asset_lu: pandas DataFrame
+        dataframe
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs, unmapped = add_tote_colour(data)
+    """
+    asset_lu = load_tote_lookup()
+    df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='Asset Code')
+    df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
+    df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
+    df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
+    df_totes['PLCN'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
+    df_totes.loc[df_totes['PLCN'] > 34, 'Tote Colour'] = 'Blue'
+    
+    df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'Area'] = df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'PLC']
+    df_totes.loc[df_totes['Pick Station']!=False, 'Area'] = 'PTT'
+    df_totes.loc[df_totes['PLCN'] > 34, 'Area'] = 'Stacker/Destacker'
+    df_totes.loc[df_totes['Area'].isnull() * df_totes['Desk'] == 'Z', 'Area'] = 'PLC External'
+    df_totes['Area'] = df_totes['Area'].fillna('Fault Not Found')
+
+    # Unmapped
+    unmapped = df_totes[df_totes['Area'] == 'Fault Not Found']['Asset Code'].value_counts().reset_index().copy()
+    unmapped = unmapped.rename(columns={'index' : 'Asset', 'Asset Code' : 'Occurrence'})
+    # Map unknown to Both
+    df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
+
+    return df_totes, unmapped
+
 @logger.logger
 def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
@@ -228,7 +298,6 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     #drop faults that happen at same time and in same location (keep only the one with max duration)
     if remove_same_location_faults == True:
         fa = fa.sort_values('Duration').drop_duplicates(subset=['timestamp', 'PLC', 'Desk'],keep='last')
-        print('duplicated location faults removed - max duration kept')
     
     ## !!HOTFIX
     fa.loc[fa['Loop']=='Quadrant', 'MODULE'] = np.nan
@@ -243,6 +312,7 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
 
     return fa, unmapped, end_time
 
+@logger.logger
 def floor_shift_time_fa(fa,shift=0):
     '''
     function that shifts and floors datetime column in a pandas df to the specific time unit
@@ -311,6 +381,7 @@ def floor_shift_time_fa(fa,shift=0):
 
     return fa_floor
 
+@logger.logger
 def fault_select(data, fault_select_options='None',duration_thres = 0):
     
     data = data.copy()
@@ -325,7 +396,8 @@ def fault_select(data, fault_select_options='None',duration_thres = 0):
     data = data[data['Duration'] > duration_thres]
     
     return data
-    
+
+@logger.logger    
 def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
     '''
     function that aggregates fault data by specified metric (agg_type) and quadrant.
@@ -352,6 +424,7 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
    
     return df 
 
+@logger.logger
 def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None",**kwargs):
 
     av = av.copy()
@@ -432,6 +505,7 @@ def aggregate_availability(df, agg_level = 'None'):
 
     return(df)
 
+@logger.logger
 def aggregate_totes(active_totes, agg_level = 'None'):
     
     active_totes = active_totes.copy()
@@ -457,7 +531,7 @@ def aggregate_totes(active_totes, agg_level = 'None'):
         
     return(active_totes)
 
-
+@logger.logger
 def weight_hours(df, weights = [1]):
     '''
     function to include weighted fault data from previous hours
@@ -480,9 +554,9 @@ def weight_hours(df, weights = [1]):
          
                 df_weight.iloc[i] = df_weight.iloc[i] + df.iloc[i-x]*weights[x]
 
-    print('Previous Hours Weighted')
     return(df_weight)
 
+@logger.logger
 def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None'):
     '''
     function that merges availability and fault datasets by date index
@@ -538,6 +612,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         
     return df   
 
+@logger.logger
 def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
     
     pick_stations = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052','PTT071','PTT072','PTT081','PTT082','PTT091','PTT092','PTT101','PTT102','PTT111','PTT112','PTT121','PTT122','PTT131','PTT132','PTT141','PTT142','PTT151','PTT152','PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
@@ -562,7 +637,7 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
 
         df = merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg , agg_level = 'Module')
         
-        df_PTT = pd.concat([df_PTT,df],axis=0,join='outer')
+        df_PTT = pd.concat([df_PTT,df],axis=0,join='outer',sort=False)
         fa_PTT.append(fa_sel)
     
     fa_PTT = dict(zip(pick_stations, fa_PTT))
@@ -573,72 +648,6 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
     df_PTT['TOTES'] = totes_col
     
     return df_PTT, fa_PTT
-
-def add_code(data):
-    """
-    Summary
-    -------
-    Takes variables and fits model with arguments. Return model object.
-    Parameters
-    ----------
-    data: pandas DataFrame
-        dataframe of features
-    Returns
-    -------
-    scs: pandas DataFrame
-        dataframe with 'code'
-    Example
-    --------
-    scs = add_code(data)
-    """
-    scs = data.copy()
-    scs['Asset Code'] = scs['Alert'].str.extract('(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
-    scs['Asset Code'] = scs['Alert'].str.extract('([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
-    scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Asset Code'] = scs.loc[scs['PLC'].str.contains(r'SCS', regex=True), 'Desk']
-    scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
-    
-    return scs
-
-def add_tote_colour(scs_code):
-    """
-    Summary
-    -------
-    Takes variables and fits model with arguments. Return model object.
-    Parameters
-    ----------
-    scs_code: pandas DataFrame
-        dataframe of features
-    asset_lu: pandas DataFrame
-        dataframe
-    Returns
-    -------
-    scs: pandas DataFrame
-        dataframe with 'code'
-    Example
-    --------
-    scs, unmapped = add_tote_colour(data)
-    """
-    asset_lu = load_tote_lookup()
-    df_totes = pd.merge(scs_code, asset_lu.drop('Number', axis=1), how='left', on='Asset Code')
-    df_totes.loc[df_totes['PLC'].isin(['C17', 'C16', 'C15', 'C23']), 'Tote Colour'] = 'Blue'
-    df_totes['Pick Station'] = df_totes['Alert'].str.extract('(PTT[0-9]{3})').fillna(False)
-    df_totes.loc[(df_totes['Pick Station']!=False), 'Tote Colour'] = 'Both'
-    df_totes['PLCN'] = df_totes['PLC'].str.extract('((?<=C)[0-9]{2})').fillna(0).astype('int')
-    df_totes.loc[df_totes['PLCN'] > 34, 'Tote Colour'] = 'Blue'
-    
-    df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'Area'] = df_totes.loc[df_totes['PLC'].isin(['C16', 'C15', 'C23']), 'PLC']
-    df_totes.loc[df_totes['Pick Station']!=False, 'Area'] = 'PTT'
-    df_totes.loc[df_totes['PLCN'] > 34, 'Area'] = 'Stacker/Destacker'
-    df_totes.loc[df_totes['Area'].isnull() * df_totes['Desk'] == 'Z', 'Area'] = 'PLC External'
-    df_totes['Area'] = df_totes['Area'].fillna('Fault Not Found')
-
-    # Unmapped
-    unmapped = df_totes[df_totes['Area'] == 'Fault Not Found']['Asset Code'].value_counts().reset_index().copy()
-    unmapped = unmapped.rename(columns={'index' : 'Asset', 'Asset Code' : 'Occurrence'})
-    # Map unknown to Both
-    df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
-
-    return df_totes, unmapped
 
 def get_data_faults(data, modules, PTT = 'None'):
     """
@@ -685,7 +694,9 @@ def get_data_faults(data, modules, PTT = 'None'):
     faults3 = data[(data['Loop'].isin(['Quadrant'])) & data['Quadrant'].isin(q)]
     #4
     faults4 = data[data['Loop'].isin(['Outside'])]
+
     faults_mod = pd.concat([faults1, faults2, faults3, faults4])
+    faults_mod.drop_duplicates(inplace=True)
     
     if PTT != 'None':
         faults_mod = faults_mod[faults_mod['Pick Station'].isin([PTT,False])]
