@@ -12,7 +12,9 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from . import logger
 
+@logger.logger
 def gen_feat_var(df,target = "Availability",features = ["Faults","Totes"]):
     
     """
@@ -58,7 +60,7 @@ def gen_feat_var(df,target = "Availability",features = ["Faults","Totes"]):
     
     return X,y
     
-    
+@logger.logger
 def split(X,y,split_options = {'test_size':0.3,
                                'random_state':None}):
     
@@ -97,6 +99,7 @@ def split(X,y,split_options = {'test_size':0.3,
     
     return X_train, X_test, y_train, y_test
 
+@logger.logger
 def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = None):
     
     """
@@ -140,6 +143,7 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle = True, random_state = Non
     
     return scores.mean()
 
+@logger.logger
 def find_features(X_train, y_train, n):
     X_train = X_train.copy()
     
@@ -153,6 +157,7 @@ def find_features(X_train, y_train, n):
         X_train = X_train.drop(rm_col, axis=1)
     return X_train.columns
 
+@logger.logger
 def run_OLS(X_train,y_train,X_test,y_test, n):
      
     class SMWrapper(BaseEstimator, RegressorMixin):

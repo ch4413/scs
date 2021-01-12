@@ -2,9 +2,11 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import scsavailability as scs
+from . import logger
     
 from scsavailability import features as feat, model as md, results as rs
 
+@logger.logger
 def create_output(fa_PTT,Coeff, end_time, speed = 470, picker_present = 0.91, availability = 0.71):
 
     Output = pd.DataFrame(columns = ['Alert ID','Alert','Fault ID','Asset Code','Tote Colour','Quadrant','MODULE','Entry Time'])
@@ -18,36 +20,35 @@ def create_output(fa_PTT,Coeff, end_time, speed = 470, picker_present = 0.91, av
         Output = pd.concat([Output,df],join='outer',ignore_index=True)
     Output.fillna(0,inplace=True)
 
-    time_limit = end_time - pd.to_timedelta(12, unit='h')
+    time_limit = end_time.ceil('H') - pd.to_timedelta(12, unit='h')
 
     Output = Output[Output['Entry Time']>time_limit]
 
-    Final_Output = pd.DataFrame({'Number': Output['Number'], 
-                                'Alert':Output['Alert'],
-                                'Entry Time':Output['Entry Time'],
-                                'End Time':Output['End Time'],
+    Final_Output = pd.DataFrame({'NUMBER': Output['Number'], 
+                                'ALERT':Output['Alert'],
+                                'ENTRY_TIME':Output['Entry Time'],
+                                'END_TIME':Output['End Time'],
                                 'PLC':Output['PLC'],
-                                'Desk':Output['Desk'],
-                                'Fault ID':Output['Fault ID'],
+                                'DESK':Output['Desk'],
+                                'FAULT_ID':Output['Fault ID'],
                                 'ID':Output['Asset Code'],
-                                'Area':Output['Area'],
-                                'BlueGrey':Output['Tote Colour'],
+                                'AREA':Output['Area'],
+                                'BLUEGREY':Output['Tote Colour'],
                                 'PTT': Output['PTT'],
-                                'Singles': Output['Singles']
+                                'SINGLES': Output['Singles']
                                 })
 
     return Final_Output
 
-
+@logger.logger
 def run_single_model(at,av,fa,end_time,shift,weights,speed,picker_present,availability):
 
     fa_floor = feat.floor_shift_time_fa(fa, shift=shift)
 
     df,fa_PTT = feat.create_PTT_df(fa_floor,at,av,weights=weights)
     df = feat.log_totes(df) 
-    df_2week = df[df['timestamp']>end_time - pd.to_timedelta(14, unit='D')]
 
-    X,y = md.gen_feat_var(df_2week,target = 'Availability', features = ['Totes','Faults'])
+    X,y = md.gen_feat_var(df,target = 'Availability', features = ['Totes','Faults'])
     X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.3,
                                                                     'random_state': None})
 

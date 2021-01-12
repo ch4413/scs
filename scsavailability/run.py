@@ -9,6 +9,7 @@ from dotmap import DotMap
 import os
 import re
 import yaml
+import sys
 
 import scsavailability as scs
 from scsavailability import features as feat, model as md, results as rs
@@ -75,7 +76,7 @@ def run(config):
     :param config:
     :return:
     """
-    
+
     data_source = config.path.source
 
     if data_source == 'Local':
@@ -98,20 +99,24 @@ def run(config):
         av = pd.read_sql(con=mi_db_connection(),sql=config.path.availability)
         fa = pd.read_sql(con=mi_db_connection(),sql=config.path.faults)
 
+    fa_old = pd.read_csv('./cache.csv')
+
+    if fa.equals(fa_old):
+        sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN') 
+    else:
+        fa.to_csv('./cache.csv',index=False)    
+
+
     speed = config.parameters.speed
     picker_present = config.parameters.picker_present
     availability = config.parameters.availability
-
-    print(speed)
-    print(picker_present)
-    print(availability)
 
     at = feat.pre_process_AT(at)
     av = feat.pre_process_av(av)
     fa, unmapped, end_time = feat.preprocess_faults(fa)
 
-    Shift = [0]#[0,0,0,10,10,10,20,20,20]
-    Weights = [[1]]#[[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
+    Shift = [0,0,0,10,10,10,20,20,20]
+    Weights = [[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
     Outputs = dict()
 
     for i in range(len(Shift)):
