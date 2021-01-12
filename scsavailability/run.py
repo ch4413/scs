@@ -110,8 +110,8 @@ def run(config):
     av = feat.pre_process_av(av)
     fa, unmapped, end_time = feat.preprocess_faults(fa)
 
-    Shift = [0,0,0,10,10,10,20,20,20]
-    Weights = [[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
+    Shift = [0]#[0,0,0,10,10,10,20,20,20]
+    Weights = [1]#[[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1],[1],[0.7,0.3],[0.7,0.2,0.1]]
     Outputs = dict()
 
     for i in range(len(Shift)):
