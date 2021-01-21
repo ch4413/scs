@@ -3,7 +3,7 @@ path:
     totes: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/active_totes_20201210.csv'
     availability: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Availability_with_Grey&Blue_1811-0912.csv'
     faults: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Faults20_11-10_12.csv'
-    save: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results/ML_Output.csv'
+    save: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results/'
 
 parameters:
     speed: 470

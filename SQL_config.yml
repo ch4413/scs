@@ -1,6 +1,6 @@
 path:
     source: 'SQL'
-    save: '\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\ML_Output.csv'
+    save: '\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\'
 
 parameters:
 

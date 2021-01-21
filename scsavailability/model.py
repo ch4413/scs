@@ -42,19 +42,19 @@ def gen_feat_var(df,target = "Availability",features = ["Faults","Totes"]):
     
     if "Faults" in features and "Totes" in features:
     
-        X = df.drop(['Availability','Blue Tote Loss','Grey Tote Loss','timestamp'],axis=1)
+        X = df.drop(['Availability','timestamp'],axis=1)
         
     elif "Faults" in features:
         
-        X =  df.drop(['Availability','Blue Tote Loss','Grey Tote Loss','timestamp','log_totes'],axis=1)
+        X =  df.drop(['Availability','timestamp','log_totes'],axis=1)
         
     elif "Totes" in features:
          
         X = pd.DataFrame(df['log_totes'])
         
     else:
-        
-        print('Features not valid')
+        X = df.drop(['Availability','timestamp'],axis=1)
+        print('Features not valid, returning all')
         
     y = df[target]
     
@@ -187,7 +187,9 @@ def run_OLS(X_train,y_train,X_test,y_test, n):
     negs = results.params[results.params < 0]
     Coefficients = pd.DataFrame(negs, columns=['Coefficient']).reset_index()
 
-    print(len(negs))
+    Num_Assets = len(negs) 
+
+    print(Num_Assets)
 
     Coefficients.rename(columns = {'index':'Asset Code'},inplace = True)
 
@@ -196,4 +198,4 @@ def run_OLS(X_train,y_train,X_test,y_test, n):
 
     print(R2_OOS)
 
-    return cv_R2,R2_OOS,Coefficients
+    return R2_OOS,Coefficients, Num_Assets
