@@ -308,12 +308,10 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
 
     fa = fa[~fa['PLC'].isin(['C17','SCSM22'])]
 
-    end_time = fa['timestamp'].max()
-
-    return fa, unmapped, end_time
+    return fa, unmapped
 
 @logger.logger
-def floor_shift_time_fa(fa,shift=0):
+def floor_shift_time_fa(fa,shift=0,duration_thres = 0):
     '''
     function that shifts and floors datetime column in a pandas df to the specific time unit
     Note: defaults to HOUR
@@ -329,6 +327,8 @@ def floor_shift_time_fa(fa,shift=0):
     '''
     
     fa_floor = fa.copy()
+
+    fa_floor = fa_floor[fa_floor['Duration'] > duration_thres]
     
     fa_floor['Entry Time'] = fa_floor['timestamp']
 
@@ -367,35 +367,75 @@ def floor_shift_time_fa(fa,shift=0):
 
         elif fa_floor['Counts'][i] !=  0 and fa_floor['Duration'][i]>3600:
             fa_floor.loc[i+1,'Duration'] = fa_floor.loc[i,'Duration'] - 3600
-            fa_floor.loc[i,'Duration'] =3600
+            fa_floor.loc[i,'Duration'] = 3600
     
     fa_floor['End Time'] = fa_floor['Entry Time'] + fa_floor['Duration'].apply(lambda x:pd.to_timedelta(x,unit='s'))
     
     fa_floor.sort_values('timestamp',ascending=True,inplace=True)
     
     fa_floor.drop(['Start','End','Time Passed','Time Left','Hours','Counts'],axis=1,inplace=True)
-    
+
     fa_floor.reset_index(inplace=True,drop=True)
-    
+
     fa_floor['Duration'] = np.log(fa_floor['Duration']) + 1
 
     return fa_floor
 
 @logger.logger
-def fault_select(data, fault_select_options='None',duration_thres = 0):
-    
-    data = data.copy()
-    
-    if fault_select_options != 'None':
-       
-        for i in fault_select_options.keys():
-    
-            data = data[data.get(i).isin(fault_select_options[i])] 
-            data = data[data[i].isin(fault_select_options[i])] 
+def fault_select(data, modules, PTT = 'None'):
+    """
+    Summary
+    -------
+    Anything in same Module
+    PLC External applying to that PLC
+    Quadrant loop dataults for the module that quadrant is in
+    Outer
 
-    data = data[data['Duration'] > duration_thres]
+    Parameters
+    ----------
+    data: pandas DataFrame
+        dataframe of features
+    module: numeric
+        dataframe
+    Returns
+    -------
+    scs: pandas DataFrame
+        dataframe with 'code'
+    Example
+    --------
+    scs, unma
+    """
+    data = data.copy()
+    PTT_lu = load_PTT_lookup()
+
+    data.drop('Pick Station',axis=1,inplace=True)
+    data = data.merge(PTT_lu,how = 'outer', on = 'Asset Code')
+    data['Pick Station'] = data['Pick Station'].fillna(False)
+
+
+    #1
+    mod_str = pd.Series(modules).astype('str')
+    faults1 = data[data['MODULE'].isin(mod_str)]
+    #2
+    a = data[['PLC', 'MODULE']].drop_duplicates()
+    b = a[(a['MODULE'].isin(mod_str)) & a['PLC'].str.contains('^C', regex=True)]
+    c = b['PLC'] + ' External'
+    faults2 = data[data['MODULE'].isin(list(c))]
+    #3
+    ## Module can't be assigned if Loop == Quadrant
+    q = data[data['MODULE'].isin(mod_str)]['Quadrant']
+    faults3 = data[(data['Loop'].isin(['Quadrant'])) & data['Quadrant'].isin(q)]
+    #4
+    faults4 = data[data['Loop'].isin(['Outside'])]
+
+    faults_mod = pd.concat([faults1, faults2, faults3, faults4])
+    faults_mod.drop_duplicates(inplace=True)
     
-    return data
+    if PTT != 'None':
+        faults_mod = faults_mod[faults_mod['Pick Station'].isin([PTT,False])]
+
+    return faults_mod
+
 
 @logger.logger    
 def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
@@ -414,7 +454,6 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
     if fault_agg_level == 'None':
 
         df = df.groupby('timestamp',as_index = False).agg({'Duration':agg_type})
-        df.rename(columns = {'Duration':'Total Faults'},inplace = True)
         df = df.set_index('timestamp')
 
     else:
@@ -425,7 +464,7 @@ def faults_aggregate(df, fault_agg_level, agg_type = 'sum'):
     return df 
 
 @logger.logger
-def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None",**kwargs):
+def av_at_select(av, at, availability_select_options = "None",remove_high_AT = True, AT_limit = "None"):
 
     av = av.copy()
     at = at.copy()
@@ -434,14 +473,15 @@ def av_at_select(av, at, availability_select_options = "None",remove_high_AT = T
        
         for i in availability_select_options.keys():
     
+            av = av[av[i].isin(availability_select_options[i])]
+
             if i == 'Pick Station':
-
-                av = av[av[i].isin(availability_select_options[i])]
-
-
+                mod_str = [w[3:5] for w in availability_select_options[i]]
+                mod = [int(i) for i in mod_str]
+                at = at[at['Module'].isin(mod)]
+                
             elif i == 'Module' or i == 'Quadrant':
 
-                av = av[av[i].isin(availability_select_options[i])]
                 at = at[at[i].isin(availability_select_options[i])]
 
             else:
@@ -497,9 +537,9 @@ def aggregate_availability(df, agg_level = 'None'):
    
     if agg_level == 'None':
     
-        df = df.groupby(['timestamp'],as_index=False).agg({'Availability':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
+        df = df.groupby(['timestamp'],as_index=False).agg({'Availability':'mean'})
     else:
-        df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Availability':'mean','Blue Tote Loss':'mean','Grey Tote Loss':'mean'})
+        df = df.groupby(['timestamp',agg_level],as_index=False).agg({'Availability':'mean'})
         
     df = df.set_index('timestamp')
 
@@ -507,7 +547,7 @@ def aggregate_availability(df, agg_level = 'None'):
 
 @logger.logger
 def aggregate_totes(active_totes, agg_level = 'None'):
-    
+   
     active_totes = active_totes.copy()
     
     active_totes['timestamp'] = active_totes['timestamp'].dt.floor('H')
@@ -579,18 +619,17 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
         max_date = min(av_df.index.max(),fa_df.index.max(),at_df.index.max(),max_date)
         
     else:
-        
-
+    
         max_date = min(av_df.index.max(),fa_df.index.max(),at_df.index.max())
     
     fa_df = fa_df.loc[min_date:max_date]
+    av_df = av_df.loc[min_date:max_date]
+    at_df = at_df.loc[min_date:max_date]
 
     if agg_level == 'None':
 
-    
-        av_df = av_df[["Availability","Blue Tote Loss","Grey Tote Loss"]].loc[min_date:max_date]
+        av_df = av_df["Availability"]
         
-
         df = av_df.merge(fa_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
 
         df = df.merge(at_df,how='inner',left_on=None, right_on=None,left_index=True, right_index=True)
@@ -599,7 +638,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
 
     if agg_level != 'None':
         
-        av_df = av_df[["Availability","Blue Tote Loss","Grey Tote Loss", agg_level]].loc[min_date:max_date]
+        av_df = av_df[["Availability", agg_level]]
         
         av_df.reset_index(inplace=True)
         at_df.reset_index(inplace=True)
@@ -613,7 +652,7 @@ def merge_av_fa_at(av_df,fa_df,at_df,min_date=None,max_date=None,agg_level='None
     return df   
 
 @logger.logger
-def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
+def create_PTT_df(fa_floor,at,av,weights = None):
     
     pick_stations = ['PTT011','PTT012','PTT021','PTT022','PTT031','PTT032','PTT041','PTT042','PTT051','PTT052','PTT071','PTT072','PTT081','PTT082','PTT091','PTT092','PTT101','PTT102','PTT111','PTT112','PTT121','PTT122','PTT131','PTT132','PTT141','PTT142','PTT151','PTT152','PTT171','PTT172','PTT181','PTT182','PTT191','PTT192','PTT201','PTT202']
     df_PTT = pd.DataFrame()
@@ -621,21 +660,23 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
     
     for PTT in pick_stations:
         
-        module = int(PTT[3:5])
+        mod = int(PTT[3:5])
         
         fa_floor = fa_floor.copy()
         
-        fa_sel = fault_select(fa_floor, fault_select_options='None',duration_thres = duration_thres)
-        fa_sel = get_data_faults(fa_sel, modules=[module],PTT = PTT)                                                        
-        fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code', **kwargs)
+        fa_sel = fault_select(fa_floor, modules=[mod],PTT = PTT)                                                        
+        fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code')
         if weights!=None:
             fa_agg = weight_hours(df = fa_agg, weights = weights)
     
         av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = True, AT_limit = 'None')
-        av_agg = aggregate_availability(av_sel, agg_level = 'Module')
-        at_agg = aggregate_totes(at_sel, agg_level = 'Module')
+        
+        agg_level = 'Module'
+        
+        av_agg = aggregate_availability(av_sel, agg_level = agg_level)
+        at_agg = aggregate_totes(at_sel, agg_level = agg_level)
 
-        df = merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg , agg_level = 'Module')
+        df = merge_av_fa_at(av_agg ,at_df=at_agg, fa_df = fa_agg , agg_level = agg_level)
         
         df_PTT = pd.concat([df_PTT,df],axis=0,join='outer',sort=False)
         fa_PTT.append(fa_sel)
@@ -648,60 +689,6 @@ def create_PTT_df(fa_floor,at,av,weights = None,duration_thres=0,**kwargs):
     df_PTT['TOTES'] = totes_col
     
     return df_PTT, fa_PTT
-
-def get_data_faults(data, modules, PTT = 'None'):
-    """
-    Summary
-    -------
-    Anything in same Module
-    PLC External applying to that PLC
-    Quadrant loop dataults for the module that quadrant is in
-    Outer
-
-    Parameters
-    ----------
-    data: pandas DataFrame
-        dataframe of features
-    module: numeric
-        dataframe
-    Returns
-    -------
-    scs: pandas DataFrame
-        dataframe with 'code'
-    Example
-    --------
-    scs, unma
-    """
-    data = data.copy()
-    PTT_lu = load_PTT_lookup()
-
-    data.drop('Pick Station',axis=1,inplace=True)
-    data = data.merge(PTT_lu,how = 'outer', on = 'Asset Code')
-    data['Pick Station'] = data['Pick Station'].fillna(False)
-
-
-    #1
-    mod_str = pd.Series(modules).astype('str')
-    faults1 = data[data['MODULE'].isin(mod_str)]
-    #2
-    a = data[['PLC', 'MODULE']].drop_duplicates()
-    b = a[(a['MODULE'].isin(mod_str)) & a['PLC'].str.contains('^C', regex=True)]
-    c = b['PLC'] + ' External'
-    faults2 = data[data['MODULE'].isin(list(c))]
-    #3
-    ## Module can't be assigned if Loop == Quadrant
-    q = data[data['MODULE'].isin(mod_str)]['Quadrant']
-    faults3 = data[(data['Loop'].isin(['Quadrant'])) & data['Quadrant'].isin(q)]
-    #4
-    faults4 = data[data['Loop'].isin(['Outside'])]
-
-    faults_mod = pd.concat([faults1, faults2, faults3, faults4])
-    faults_mod.drop_duplicates(inplace=True)
-    
-    if PTT != 'None':
-        faults_mod = faults_mod[faults_mod['Pick Station'].isin([PTT,False])]
-
-    return faults_mod
 
 def log_totes(df):
     """

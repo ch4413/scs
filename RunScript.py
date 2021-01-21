@@ -1,10 +1,19 @@
 import pandas as pd
 import scsavailability as scs
+import sys
+from datetime import datetime
     
 from scsavailability import features as feat, model as md, results as rs
 
+begin_time = datetime.now()
 
-data_source = 'SQL'
+data_source = 'Local'
+
+if data_source == 'Local':
+
+    at = pd.read_csv('C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/active_totes_20201210.csv')
+    av = pd.read_csv('C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Availability_with_Grey&Blue_1811-0912.csv',names = ["timestamp","Pick Station","Availability","Blue Tote Loss","Grey Tote Loss"])
+    fa = pd.read_csv('C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Faults20_11-10_12.csv')
 
 if data_source == 'SQL':
 
@@ -18,14 +27,23 @@ if data_source == 'SQL':
 
     at = pd.read_sql(con=mi_db_connection(),sql=                 
             '''
-                SELECT *
-FROM [SOLAR].[Data_Power_BI_Active_Totes_SCS] t1 where cast(concat(year,'/',MONTH,'/',DAY) as date) >= getdate()-14
+                with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
+
+select t.*
+from solar.Data_Power_BI_Active_Totes_SCS t
+left join mindate on 1=1
+where cast(concat(year,'/',month,'/',day,' ',hour,':',minute,':00') as datetime) > mindate.mindate
+and cast(concat(year,'/',month,'/',day,' ',hour,':',minute,':00') as datetime) <= mindate.maxdate
+order by cast(concat(year,'/',month,'/',day,' ',hour,':',minute,':00') as datetime) asc
+
 ''') 
 
     av = pd.read_sql(con=mi_db_connection(),sql=
     
     '''
-                with avail as (
+                with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
+
+, avail as (
 select distinct
 t.[Pick Station]
 ,t.date 
@@ -54,15 +72,10 @@ w.date
 ,a.work_avail_picker_absent
 ,a.work_avail_picker_present
 ,a.work_unvail
-,b.NumberTotes
-,b.NumberTotesAdj
 from ods.stage.Newton_Waste_Tput w
 left join avail a on
 a.date = w.date
 and a.[Pick Station] = w.[Pick Station]
-left join ods.solar.data_analytics_newton_bluetotes_snapshot b on
-w.date = b.date
-and w.[Pick Station] = b.[Pick Station]
 )
 
 , output1 as (
@@ -76,9 +89,10 @@ select
 Date as timestamp
 ,[Pick Station]
 ,Availability
-,case when numbertotesadj is null then null when 1-availability>0.8-0.08*NumberTotesAdj then 0.8-0.08*NumberTotesAdj else 1-availability end as "Blue Tote Loss"
-,case when numbertotesadj is null then null when 1-availability>0.8-0.08*NumberTotesAdj then 1-availability-(0.8-0.08*NumberTotesAdj) else 0 end as "Grey Tote Loss"
 from output1 o
+left join mindate on 1=1
+where date > mindate.mindate
+and date <= mindate.maxdate
 order by date asc, [Pick Station] asc
 
 ''')
@@ -86,18 +100,48 @@ order by date asc, [Pick Station] asc
 
     fa = pd.read_sql(con=mi_db_connection(),sql=                 
             '''
-                    select Number,Text as Alert,EntryTime as "Entry Time",Group2 as PLC,Group3 as Desk,Duration,"Additional Info 1" as "Fault ID" from SOLAR.ScadaData
+                    with mindate as (select max(entry_time)-14 mindate from stage.scadadata)
 
-where Group2 in('C05',              'C06',     'C07',     'C08',     'C09',     'C10',     'C11',     'C12',     'C13',     'C14',     'C15',     'C16',                'C23',     'C35',     'C36',     'C37',     'C38',     'C39',     'C40',     'C41',     'C42',     'C43',     'C44',     'C45',     'C46',     'C47',                'C48',     'C49',     'C50',     'C51',     'C52',     'SCSM01',            'SCSM02',            'SCSM03',            'SCSM04',                'SCSM05',            'SCSM07',            'SCSM08',            'SCSM09',            'SCSM10',            'SCSM11',            'SCSM12',                'SCSM13',            'SCSM14',            'SCSM15',            'SCSM17',            'SCSM18',            'SCSM19',            'SCSM20')
+select  
+Number
+,Text as Alert
+,ENTRY_TIME as "Entry Time"
+,Group2 as PLC
+,Group3 as Desk 
+,Duration
+,Additional_Info_1 as "Fault ID"
+from STAGE.ScadaData
+left join mindate on 1=1
+where Group2 in('C05', 'C06', 'C07', 'C08', 'C09', 'C10', 'C11', 'C12', 'C13', 'C14', 'C15', 'C16', 'C23', 'C35', 'C36', 'C37', 'C38', 'C39', 'C40', 'C41', 'C42', 'C43', 'C44', 'C45', 'C46', 'C47', 'C48', 'C49', 'C50', 'C51', 'C52', 'SCSM01', 'SCSM02', 'SCSM03', 'SCSM04', 'SCSM05', 'SCSM07', 'SCSM08', 'SCSM09', 'SCSM10', 'SCSM11', 'SCSM12', 'SCSM13', 'SCSM14', 'SCSM15', 'SCSM17', 'SCSM18', 'SCSM19', 'SCSM20')
+and mindate.mindate < entry_time
+
 ''') 
 
 
 fa_old = pd.read_csv('./cache.csv')
+fa_old_max = pd.to_datetime(fa_old['Entry Time'],dayfirst=True).max()
+fa_max = pd.to_datetime(fa['Entry Time'],dayfirst=True).max()
 
-if fa.equals(fa_old):
-    sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN') 
+if fa_max == fa_old_max:
+    log = pd.read_excel('./Run_log.xlsx')
+    now = datetime.now()
+    runtime = str(now-begin_time)
+    timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+    new_row = pd.DataFrame([[timestamp_string,'No SCADA Data','No SCADA Data',runtime,'No SCADA Data','No SCADA Data']],columns = log.columns)
+    new_log = log.append(new_row, ignore_index = True)
+    new_log.to_excel('./Run_log.xlsx',index=False)
+    sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
 else:
     fa.to_csv('./cache.csv',index=False)    
+
+report_end = fa_max.ceil('H')
+reporting_window = fa_max.ceil('H') - fa_old_max.ceil('H')
+
+if reporting_window.days < 2:
+    report_start = fa_old_max.ceil('H')
+else:
+    report_start = fa_max - pd.to_timedelta(12, unit='H')
+    reporting_window = pd.to_timedelta(12, unit='H')
 
 
 speed = 470
@@ -106,22 +150,34 @@ availability = 0.71
 
 at = feat.pre_process_AT(at)
 av = feat.pre_process_av(av)
-fa, unmapped, end_time = feat.preprocess_faults(fa)
+fa, unmapped = feat.preprocess_faults(fa)
 
 Shift = [0,0,15,15]
 Weights = [[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
 Outputs = dict()
+Asset_Nums = dict()
 
 for i in range(len(Shift)):
 
-    Output, R2 = rs.run_single_model(at,av,fa,end_time,shift=Shift[i],weights=Weights[i],speed=speed,picker_present=picker_present,availability=availability)
+    Output, R2, Num_Assets = rs.run_single_model(at,av,fa,report_start,report_end,shift=Shift[i],weights=Weights[i],speed=speed,picker_present=picker_present,availability=availability)
 
     Outputs[R2] = Output
+    Asset_Nums[R2] = Num_Assets
 
-print('Selected R2:', max(k for k, v in Outputs.items()))
+R2_sel = max(k for k, v in Outputs.items())
+feat_sel = Asset_Nums[max(k for k, v in Outputs.items())]
+
+print('Selected R2:', R2_sel)
+print('Number of Selected Assets:', feat_sel)
 
 Output = Outputs[max(k for k, v in Outputs.items())]
 
-Output.to_csv('\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\ML_Output.csv', index = False)
+log = pd.read_excel('./Run_log.xlsx')
+now = datetime.now()
+runtime = str(now-begin_time)
+timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-print('Model Ran Successfully and Sent Output File to Landing Zone')
+new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,report_end]],columns = log.columns)
+new_log = log.append(new_row, ignore_index = True)
+new_log.to_excel('./Run_log.xlsx',index=False)
+Output.to_csv('C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results/' + 'ML_Output_' + timestamp_string + '.csv', index = False)
