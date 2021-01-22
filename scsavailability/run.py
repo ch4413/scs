@@ -99,7 +99,7 @@ def run(config):
 
         at = pd.read_sql(con=mi_db_connection(),sql=                 
                 '''
-                 with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
+                 with mindate as (select max(entry_time) maxdate, max(entry_time)-30 mindate from stage.scadadata)
 
 select t.*
 from solar.Data_Power_BI_Active_Totes_SCS t
@@ -113,7 +113,7 @@ order by cast(concat(year,'/',month,'/',day,' ',hour,':',minute,':00') as dateti
         av = pd.read_sql(con=mi_db_connection(),sql=
         
         '''
-                 with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
+                 with mindate as (select max(entry_time) maxdate, max(entry_time)-30 mindate from stage.scadadata)
 
 , avail as (
 select distinct
@@ -169,10 +169,9 @@ order by date asc, [Pick Station] asc
 
 ''')
 
-
         fa = pd.read_sql(con=mi_db_connection(),sql=                 
                 '''
-                      with mindate as (select max(entry_time)-14 mindate from stage.scadadata)
+                      with mindate as (select max(entry_time)-30 mindate from stage.scadadata)
 
 select  
 Number
