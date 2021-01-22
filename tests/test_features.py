@@ -30,3 +30,4 @@ class FeatureTests:
         av = pd.DataFrame({'timestamp':['2021-01-09 08:00:00','2021-01-10 08:00:00','2021-01-11 08:00:00','2021-01-12 08:00:00','2021-01-13 08:00:00'],'Pick Station':['PTT011','PTT051','PTT072','PTT112','PTT202'],'Availability':[0.9,0.8,0.75,0.3,0.1]})
         av_processed = feat.pre_process_av(av)
         assert True
+

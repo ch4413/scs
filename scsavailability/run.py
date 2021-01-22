@@ -251,8 +251,11 @@ and mindate.mindate < entry_time
     new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,report_end]],columns = log.columns)
     new_log = log.append(new_row, ignore_index = True)
     new_log.to_csv('./Run_log.csv',index=False)
+
     path = r'%sML_Output_%s.csv' % (config.path.save,timestamp_string)
     Output.to_csv(path, index = False)
+
+
 
 if __name__ == '__main__':
     print('running with config')
