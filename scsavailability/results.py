@@ -39,9 +39,9 @@ def create_output(fa_PTT,Coeff, report_start, report_end, speed = 470, picker_pr
     return Final_Output
 
 @logger.logger
-def run_single_model(at,av,fa,report_start,report_end,shift,weights,speed,picker_present,availability,duration_thres=0):
+def run_single_model(at,av,fa,report_start,report_end,shift,weights,speed,picker_present,availability):
 
-    fa_floor = feat.floor_shift_time_fa(fa, shift=shift,duration_thres=duration_thres)
+    fa_floor = feat.floor_shift_time_fa(fa, shift=shift)
 
     df,fa_PTT = feat.create_PTT_df(fa_floor,at,av,weights=weights)
     df = feat.log_totes(df)
