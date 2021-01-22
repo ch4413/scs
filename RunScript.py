@@ -7,7 +7,7 @@ from scsavailability import features as feat, model as md, results as rs
 
 begin_time = datetime.now()
 
-data_source = 'Local'
+data_source = 'SQL'
 
 if data_source == 'Local':
 
