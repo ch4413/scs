@@ -223,8 +223,8 @@ and mindate.mindate < entry_time
     av = feat.pre_process_av(av)
     fa, unmapped = feat.preprocess_faults(fa)
 
-    Shift = [0]#[0,0,15,15]
-    Weights = [[1]]#[[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
+    Shift = [0,0,15,15]
+    Weights = [[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
     Outputs = dict()
     Asset_Nums = dict()
 
