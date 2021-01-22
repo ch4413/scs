@@ -181,4 +181,4 @@ new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,r
 new_log = log.append(new_row, ignore_index = True)
 new_log.to_csv('./Run_log.csv',index=False)
 
-Output.to_csv(r"\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\ML_Output_" + "timestamp_string" + ".csv", index = False)
+Output.to_csv(r"\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\ML_Output_" + timestamp_string + ".csv", index = False)
