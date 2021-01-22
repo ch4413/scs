@@ -7,7 +7,7 @@ from scsavailability import features as feat, model as md, results as rs
 
 begin_time = datetime.now()
 
-data_source = 'SQL'
+data_source = 'Local'
 
 if data_source == 'Local':
 
@@ -172,7 +172,7 @@ print('Number of Selected Assets:', feat_sel)
 
 Output = Outputs[max(k for k, v in Outputs.items())]
 
-log = pd.read_excel('./Run_log.xlsx')
+log = pd.read_csv('./Run_log.csv')
 now = datetime.now()
 runtime = str(now-begin_time)
 timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
