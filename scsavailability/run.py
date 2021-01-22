@@ -99,7 +99,7 @@ def run(config):
 
         at = pd.read_sql(con=mi_db_connection(),sql=                 
                 '''
-                 with mindate as (select max(entry_time) maxdate, max(entry_time)-30 mindate from stage.scadadata)
+                 with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
 
 select t.*
 from solar.Data_Power_BI_Active_Totes_SCS t
@@ -113,7 +113,7 @@ order by cast(concat(year,'/',month,'/',day,' ',hour,':',minute,':00') as dateti
         av = pd.read_sql(con=mi_db_connection(),sql=
         
         '''
-                 with mindate as (select max(entry_time) maxdate, max(entry_time)-30 mindate from stage.scadadata)
+                 with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
 
 , avail as (
 select distinct
@@ -171,7 +171,7 @@ order by date asc, [Pick Station] asc
 
         fa = pd.read_sql(con=mi_db_connection(),sql=                 
                 '''
-                      with mindate as (select max(entry_time)-30 mindate from stage.scadadata)
+                      with mindate as (select max(entry_time)-14 mindate from stage.scadadata)
 
 select  
 Number
@@ -194,13 +194,13 @@ and mindate.mindate < entry_time
     fa_max = pd.to_datetime(fa['Entry Time'],dayfirst=True).max()
     
     if fa_max == fa_old_max:
-        log = pd.read_excel('./Run_log.xlsx')
+        log = pd.read_csv('./Run_log.csv')
         now = datetime.now()
         runtime = str(now-begin_time)
         timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
         new_row = pd.DataFrame([[timestamp_string,'No SCADA Data','No SCADA Data',runtime,'No SCADA Data','No SCADA Data']],columns = log.columns)
         new_log = log.append(new_row, ignore_index = True)
-        new_log.to_excel('./Run_log.xlsx',index=False)
+        new_log.to_csv('./Run_log.csv',index=False)
         sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
     else:
         fa.to_csv('./cache.csv',index=False)    
@@ -211,7 +211,7 @@ and mindate.mindate < entry_time
     if reporting_window.days < 2:
         report_start = fa_old_max.ceil('H')
     else:
-        report_start = fa_max - pd.to_timedelta(12, unit='H')
+        report_start = report_end - pd.to_timedelta(12, unit='H')
         reporting_window = pd.to_timedelta(12, unit='H')
 
 
@@ -223,8 +223,8 @@ and mindate.mindate < entry_time
     av = feat.pre_process_av(av)
     fa, unmapped = feat.preprocess_faults(fa)
 
-    Shift = [0,0,15,15]
-    Weights = [[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
+    Shift = [0]#[0,0,15,15]
+    Weights = [[1]]#[[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
     Outputs = dict()
     Asset_Nums = dict()
 
@@ -243,15 +243,16 @@ and mindate.mindate < entry_time
 
     Output = Outputs[max(k for k, v in Outputs.items())]
 
-    log = pd.read_excel('./Run_log.xlsx')
+    log = pd.read_csv('./Run_log.csv')
     now = datetime.now()
     runtime = str(now-begin_time)
     timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
     new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,report_end]],columns = log.columns)
     new_log = log.append(new_row, ignore_index = True)
-    new_log.to_excel('./Run_log.xlsx',index=False)
-    Output.to_csv(config.path.save + 'ML_Output_' + timestamp_string + '.csv', index = False)
+    new_log.to_csv('./Run_log.csv',index=False)
+    path = r'%sML_Output_%s.csv' % (config.path.save,timestamp_string)
+    Output.to_csv(path, index = False)
 
 if __name__ == '__main__':
     print('running with config')
