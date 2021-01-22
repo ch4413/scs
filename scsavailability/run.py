@@ -194,13 +194,13 @@ and mindate.mindate < entry_time
     fa_max = pd.to_datetime(fa['Entry Time'],dayfirst=True).max()
     
     if fa_max == fa_old_max:
-        log = pd.read_excel('./Run_log.xlsx')
+        log = pd.read_csv('./Run_log.csv')
         now = datetime.now()
         runtime = str(now-begin_time)
         timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
         new_row = pd.DataFrame([[timestamp_string,'No SCADA Data','No SCADA Data',runtime,'No SCADA Data','No SCADA Data']],columns = log.columns)
         new_log = log.append(new_row, ignore_index = True)
-        new_log.to_excel('./Run_log.xlsx',index=False)
+        new_log.to_csv('./Run_log.csv',index=False)
         sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
     else:
         fa.to_csv('./cache.csv',index=False)    
@@ -243,14 +243,14 @@ and mindate.mindate < entry_time
 
     Output = Outputs[max(k for k, v in Outputs.items())]
 
-    log = pd.read_excel('./Run_log.xlsx')
+    log = pd.read_csv('./Run_log.csv')
     now = datetime.now()
     runtime = str(now-begin_time)
     timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
     new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,report_end]],columns = log.columns)
     new_log = log.append(new_row, ignore_index = True)
-    new_log.to_excel('./Run_log.xlsx',index=False)
+    new_log.to_csv('./Run_log.csv',index=False)
     Output.to_csv(config.path.save + 'ML_Output_' + timestamp_string + '.csv', index = False)
 
 if __name__ == '__main__':
