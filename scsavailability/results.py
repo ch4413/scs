@@ -12,7 +12,7 @@ def create_output(fa_PTT,Coeff, report_start, report_end, speed = 470, picker_pr
 
     Output = pd.DataFrame(columns = ['Alert ID','Alert','Fault ID','Asset Code','Tote Colour','Quadrant','MODULE','Entry Time'])
     for x in fa_PTT.items():
-        df = x[1].merge(Coeff,how = "inner",on="Asset Code")
+        df = x[1].merge(Coeff, how = "inner", on="Asset Code")
         df['Downtime'] = abs(df['Coefficient']) * df['Duration']
         df['ones'] = pd.Series(np.ones(len(df)))
         df['PTT'] = str(x[0])
