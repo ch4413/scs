@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import scsavailability as scs
 from . import logger
+import warnings
     
 from scsavailability import features as feat, model as md, results as rs
 
@@ -39,19 +40,34 @@ def create_output(fa_PTT,Coeff, report_start, report_end, speed = 470, picker_pr
     return Final_Output
 
 @logger.logger
-def run_single_model(at,av,fa,report_start,report_end,shift,weights,speed,picker_present,availability):
-
-    fa_floor = feat.floor_shift_time_fa(fa, shift=shift)
-
-    df,fa_PTT = feat.create_PTT_df(fa_floor,at,av,weights=weights)
-    df = feat.log_totes(df)
-
-    X,y = md.gen_feat_var(df,target = 'Availability', features = ['Totes','Faults'])
-    X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.3,
+def run_single_model(*, sc_data, report_start, report_end, shift,weights, speed, picker_present,availability):
+    """
+    Summary
+    -------
+    Runs pre-processing and fitting for model
+    ----------
+    sc_data: scsdata ScsData
+        scs data object
+    Returns
+    -------
+    Example
+    --------
+    run_single_model(config)
+    """
+    # Transform data for modelling
+    sc_data.floor_shift_time_fa(shift=shift)
+    fa_PTT = sc_data.create_ptt_df(weights=weights)
+    sc_data.log_totes()
+    # Modelling
+    X,y = md.gen_feat_var(sc_data.df,target = 'Availability', features = ['Totes','Faults'])
+    X_train, X_test, y_train, y_test = md.split(X,y,split_options = {'test_size': 0.2,
                                                                     'random_state': None})
+    # Catch and ignore NaN OLS warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        r2_oos, coeff, num_assets = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 30)
+    # Create output
+    output = rs.create_output(fa_PTT, coeff, report_start, report_end, speed = speed, picker_present = picker_present, 
+                            availability = availability)
 
-    R2_OOS,Coeff, Num_Assets = md.run_OLS(X_train = X_train,y_train = y_train,X_test = X_test,y_test=y_test, n = 30)
-
-    Output = rs.create_output(fa_PTT,Coeff,report_start,report_end,speed = speed, picker_present = picker_present, availability = availability)
-
-    return Output, R2_OOS, Num_Assets
+    return output, r2_oos, num_assets

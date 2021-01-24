@@ -1,7 +1,6 @@
 """
 All features work
 """
-
 import pandas as pd
 import numpy as np
 from . import logger
@@ -18,8 +17,7 @@ def load_module_lookup():
         index          68 non-null int64
         name           68 non-null object
         name.full      68 non-null object
-    ... (docstring truncated) ...
-
+     (docstring truncated)
     """
     # This is a stream-like object. If you want the actual info, call
     # stream.read()
@@ -76,7 +74,7 @@ def load_PTT_lookup():
     return pd.read_csv(stream)        
 
 @logger.logger
-def pre_process_AT(active_totes):
+def pre_process_at(active_totes):
     
     active_totes = active_totes[~active_totes['MODULE_ASSIGNED'].isin(['ECB', 'RCB'])].copy()
     

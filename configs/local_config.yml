@@ -1,0 +1,13 @@
+path:
+    source: 'Local'
+    totes: 'C:/Users/chris.hughes/Desktop/active_totes_20201210.csv'
+    availability: 'C:/Users/chris.hughes/Desktop/Availability_with_Grey&Blue_1811-0912.csv'
+    
+    faults: 'C:/Users/chris.hughes/Desktop//Faults20_11-10_12.csv'
+    save: 'C:/Users/chris.hughes/Desktop/'
+
+parameters:
+    speed: 470
+    picker_present: 0.91
+    availability: 0.71
+
