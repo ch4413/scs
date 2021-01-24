@@ -17,10 +17,10 @@ Make sure that your have your directory set to `scs`.
 
 # Testing
 
-Test running `tox.ini`, or solely:
+Test running `tox.ini` or in `scs`
 
 ```
-python -
+python -m pytest -v
 ```
 
 # SCS Availability
