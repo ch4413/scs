@@ -4,6 +4,7 @@ import yaml
 import os
 from dotmap import DotMap
 
+
 def parse_config(path=None, data=None, tag='!ENV'):
     """
     Load a yaml configuration file and resolve any environment variables
