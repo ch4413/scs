@@ -1,6 +1,7 @@
 import pandas as pd
 import pyodbc
 
+
 def get_credentials(filepath='../data/sql_password.txt'):
     """
     Summary
@@ -25,6 +26,7 @@ def get_credentials(filepath='../data/sql_password.txt'):
         user, password = f.readlines()[0].split()
     return user, password
 
+
 def mi_db_connection():
     """
     Summary
@@ -39,12 +41,13 @@ def mi_db_connection():
     Example
     --------
     sql_conn = db_connect('dbname', 'myuser', 'mypass')
-    """ 
+    """
     sql_conn = pyodbc.connect('Driver={SQL Server};'
-                            'Server=MSHSRMNSUKP1405;'
-                            'Database=ODS;'
-                            'as_dataframe=True')
+                              'Server=MSHSRMNSUKP1405;'
+                              'Database=ODS;'
+                              'as_dataframe=True')
     return sql_conn
+
 
 def read_query(sql_conn, query_path='../sql/test_query.sql'):
     """
@@ -68,8 +71,7 @@ def read_query(sql_conn, query_path='../sql/test_query.sql'):
     fd = open(query_path, 'r')
     query = fd.read()
     fd.close()
-    
+
     df = pd.read_sql(query, sql_conn)
-    
+
     return df
-    

@@ -5,7 +5,8 @@ from argparse import ArgumentParser
 import sys
 import pkg_resources as pkg
 # Import modules
-from scsavailability import features as feat, model as md, results as rs, db, parser as ps, scsdata 
+from scsavailability import results as rs, db, parser as ps, scsdata
+
 
 def run(config):
     """
@@ -27,9 +28,11 @@ def run(config):
     report_start = config.report.start
     report_end = config.report.end
 
+
     if data_source == 'Local':
         # Import local data
         at = pd.read_csv(config.path.totes)
+
         av = pd.read_csv(config.path.availability)
         fa = pd.read_csv(config.path.faults)
         # Add report dummies to run locally if none set
@@ -46,9 +49,12 @@ def run(config):
         # Create single connection
         conn = db.mi_db_connection()
         # Query DB using stored package queries
-        at = pd.read_sql(con=conn,sql= pkg.resource_stream(__name__, 'data/sql/active_totes.sql')) 
-        av = pd.read_sql(con=conn,sql=pkg.resource_stream(__name__, 'data/sql/availability.sql'))
-        fa = pd.read_sql(con=conn,sql=pkg.resource_stream(__name__, 'data/sql/active_totes.sql')) 
+        at = pd.read_sql(con=conn, sql=pkg.resource_stream(__name__,
+                         'data/sql/active_totes.sql'))
+        av = pd.read_sql(con=conn, sql=pkg.resource_stream(__name__,
+                         'data/sql/availability.sql'))
+        fa = pd.read_sql(con=conn, sql=pkg.resource_stream(__name__,
+                         'data/sql/active_totes.sql'))
         # Read cache
 
         fa_old = pd.read_csv(cache_path)
@@ -62,9 +68,10 @@ def run(config):
                 now = datetime.now()
                 runtime = str(now-begin_time)
                 timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-                new_row = pd.DataFrame(
-                    [[timestamp_string,'No SCADA Data','No SCADA Data',runtime,'No SCADA Data','No SCADA Data']],
-                    columns = log.columns)
+                new_row = pd.DataFrame([[timestamp_string,'No SCADA Data',
+                                         'No SCADA Data',runtime, 'No SCADA Data',
+                                         'No SCADA Data']],
+                                          columns = log.columns)
                 new_log = log.append(new_row, ignore_index = True)
                 new_log.to_csv(log_path,index=False)
                 sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
@@ -100,20 +107,29 @@ def run(config):
     sc0.floor_shift_time_fa(shift=0)
     sc15.floor_shift_time_fa(shift=15)
 
-    shift = [0,0,15,15]
-    weights = [[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
+    shift = [0, 0, 15, 15]
+    weights = [[1], [0.7, 0.2, 0.1], [1], [0.7, 0.2, 0.1]]
     outputs = dict()
     asset_nums = dict()
 
     for i in range(len(weights)):
         if shift[i] == 0:
             output, R2, num_assets = rs.run_single_model(sc_data=sc0, 
-                report_start=report_start, report_end=report_end, weights=weights[i], speed=speed, 
-                picker_present=picker_present, availability=availability)
+                                                         report_start=report_start,
+                                                         report_end=report_end,
+                                                         weights=weights[i],
+                                                         speed=speed, 
+                                                         picker_present=picker_present,
+                                                         availability=availability)
         if shift[i] == 15:    
-                output, R2, num_assets = rs.run_single_model(sc_data=sc15, 
-                report_start=report_start, report_end=report_end, weights=weights[i], speed=speed, 
-                picker_present=picker_present, availability=availability)
+             output, R2, num_assets =rs.run_single_model(sc_data=sc15, 
+                                                         report_start=report_start,
+                                                         report_end=report_end,
+                                                         weights=weights[i],
+                                                         speed=speed, 
+                                                         picker_present=picker_present,
+                                                         availability=availability)
+
         outputs[R2] = output
         asset_nums[R2] = num_assets
         print(output['ENTRY_TIME'])
@@ -131,12 +147,15 @@ def run(config):
     runtime = str(now-begin_time)
     timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-    new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,report_start,report_end]],columns = log.columns)
+
+    new_row = pd.DataFrame([[timestamp_string,R2_sel,feat_sel,runtime,
+                             report_start,report_end]],columns = log.columns)
     new_log = log.append(new_row, ignore_index = True)
     new_log.to_csv(log_path,index=False)
 
     save_path = r'%sML_output_%s.csv' % (config.path.save,timestamp_string)
     output.to_csv(save_path, index = False)
+
 
 if __name__ == '__main__':
 
