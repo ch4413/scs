@@ -10,14 +10,14 @@ from scsavailability import features as feat, model as md, results as rs
 @logger.logger
 def create_output(fa_PTT,Coeff, report_start, report_end, speed = 470, picker_present = 0.91, availability = 0.71):
 
-    Output = pd.DataFrame(columns = ['Alert ID','Alert','Fault ID','Asset Code','Tote Colour','Quadrant','MODULE','Entry Time'])
+    Output = pd.DataFrame(columns = ['Number','Alert','Entry Time','End Time','PLC','Desk','Fault ID','Asset Code','Area','Tote Colour','PTT','Singles'])
     for x in fa_PTT.items():
         df = x[1].merge(Coeff, how = "inner", on="Asset Code")
         df['Downtime'] = abs(df['Coefficient']) * df['Duration']
         df['ones'] = pd.Series(np.ones(len(df)))
         df['PTT'] = str(x[0])
         df['Singles'] = df[['Downtime','ones']].min(axis=1) * (speed * picker_present * availability)
-        df.drop(['timestamp','Duration','Loop','Suffix','PLCN','Alert Type','Pick Station','Coefficient','Downtime','ones'],axis=1,inplace=True)
+        df.drop(['timestamp','Duration','Loop','Suffix','PLCN','Alert Type','Pick Station','Coefficient','Downtime','ones','Alert ID'],axis=1,inplace=True)
         Output = pd.concat([Output,df],join='outer',ignore_index=True)
     Output.fillna(0,inplace=True)
 
@@ -40,7 +40,7 @@ def create_output(fa_PTT,Coeff, report_start, report_end, speed = 470, picker_pr
     return Final_Output
 
 @logger.logger
-def run_single_model(*, sc_data, report_start, report_end, shift,weights, speed, picker_present,availability):
+def run_single_model(*, sc_data, report_start, report_end,weights, speed, picker_present,availability):
     """
     Summary
     -------
@@ -55,7 +55,6 @@ def run_single_model(*, sc_data, report_start, report_end, shift,weights, speed,
     run_single_model(config)
     """
     # Transform data for modelling
-    sc_data.floor_shift_time_fa(shift=shift)
     fa_PTT = sc_data.create_ptt_df(weights=weights)
     sc_data.log_totes()
     # Modelling

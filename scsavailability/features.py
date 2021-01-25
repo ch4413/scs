@@ -220,7 +220,7 @@ def add_tote_colour(scs_code):
     return df_totes, unmapped
 
 @logger.logger
-def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
+def pre_process_fa(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
     
     fa.columns = pd.Series(fa.columns).str.strip()
 
@@ -228,14 +228,13 @@ def preprocess_faults(fa,remove_same_location_faults = True,remove_warnings = Tr
     fa, unmapped = add_tote_colour(fa)
 
     fa.reset_index(inplace=True)
-    fa.rename(columns = {fa.columns[3]:'timestamp','index':'Alert ID'},inplace = True)
+    fa.rename(columns = {'Entry Time':'timestamp','index':'Alert ID'},inplace = True)
 
     #Assign PLC code to Quadrants
     Quad_1 = ['C0' + str(i) for i in range(5,8)]  + ['SCSM0' + str(i) for i in range(1,6)]
     Quad_2 = ['C0' + str(i) for i in range(8,10)] + ['SCSM0' + str(i) for i in range(7,10)] + ['SCSM10']
     Quad_3 = ['C'  + str(i) for i in range(10,13)] + ['SCSM' + str(i) for i in range(11,16)]
     Quad_4 = ['C'  + str(i) for i in range(13,15)] + ['SCSM' + str(i) for i in range(17,21)]
-
 
     #Assign faults to Quadrants  
     Quad = []
@@ -346,7 +345,7 @@ def floor_shift_time_fa(fa,shift=0,duration_thres = 0):
     
     fa_floor = fa_floor.loc[fa_floor.index.repeat(fa_floor.Hours)].reset_index(drop=True)
        
-    fa_floor['Counts'] = fa_floor.groupby(['Number','Hours','timestamp']).cumcount()
+    fa_floor['Counts'] = fa_floor.groupby(['Alert ID','Hours','timestamp']).cumcount()
     
     fa_floor['timestamp'] = fa_floor['Start'] + pd.to_timedelta(fa_floor['Counts'], unit='h')
 
@@ -664,7 +663,7 @@ def create_PTT_df(fa_floor,at,av,weights = None):
         
         fa_sel = fault_select(fa_floor, modules=[mod],PTT = PTT)                                                        
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code')
-        if weights!=None:
+        if weights != None or weights != [1]:
             fa_agg = weight_hours(df = fa_agg, weights = weights)
     
         av_sel,at_sel = av_at_select(av, at, availability_select_options = {'Pick Station' : [PTT]}, remove_high_AT = True, AT_limit = 'None')

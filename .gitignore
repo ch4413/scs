@@ -3,7 +3,7 @@
 raw_data/
 # Not tracking changes for cache for log
 cache.csv
-Run_log.csv
+run_log.csv
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
