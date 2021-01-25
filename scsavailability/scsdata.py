@@ -21,7 +21,7 @@ class ScsData():
         self.av_processed = feat.pre_process_av(self.av)
 
     def pre_process_faults(self):
-        self.fa_processed, self.unmapped = feat.preprocess_faults(self.fa)
+        self.fa_processed, self.unmapped = feat.pre_process_fa(self.fa)
 
     def floor_shift_time_fa(self, shift=0):
         self.fa_processed = feat.floor_shift_time_fa(self.fa_processed,

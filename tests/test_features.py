@@ -23,6 +23,7 @@ class FeatureTests:
         assert list(lu.columns) == ['Asset Code', 'Pick Station']
 
     def test_preprocess_AT(self):
+
         at = pd.DataFrame({'ID': [1, 5, 7, 11, 20],
                            'MODULE_ASSIGNED': ['SCS01', 'SCS05', 'SCS07',
                                                'SCS11', 'SCS20'],
@@ -33,7 +34,7 @@ class FeatureTests:
                                     '2021'],
                            'HOUR': ['08', '08', '08', '08', '08'],
                            'MINUTE': ['30', '30', '30', '30', '30']})
-        at_processed = feat.pre_process_AT(at)
+        at_processed = feat.pre_process_at(at)
         at_expected = pd.DataFrame({'Module': [1, 5, 7, 11, 20],
                                     'TOTES': ['42', '30', '21', '55', '90'],
                                     'timestamp': pd.to_datetime([
@@ -43,6 +44,7 @@ class FeatureTests:
                                         '2021-01-12 08:30:00',
                                         '2021-01-13 08:30:00']),
                                     'Quadrant': [1, 1, 2, 3, 4]})
+
         assert at_processed.equals(at_expected)
 
     def test_preprocess_av(self):

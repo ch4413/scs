@@ -1,9 +1,8 @@
 import pandas as pd
-import scsavailability as scs
 import sys
 from datetime import datetime
     
-from scsavailability import features as feat, model as md, results as rs
+from scsavailability import features as feat, model as md, results as rs, db, parser as ps, scsdata 
 
 begin_time = datetime.now()
 
@@ -150,7 +149,7 @@ availability = 0.71
 
 at = feat.pre_process_AT(at)
 av = feat.pre_process_av(av)
-fa, unmapped = feat.preprocess_faults(fa)
+fa, unmapped = feat.pre_process_fa(fa)
 
 Shift = [0,0,15,15]
 Weights = [[1],[0.7,0.2,0.1],[1],[0.7,0.2,0.1]]
