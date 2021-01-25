@@ -1,3 +1,28 @@
+# Getting Started
+
+1. Change directory to where the scs folder is saved
+2. `conda create --name scs_env` 
+3. `conda activate scs_env` 
+4. `conda install pip` 
+5. `pip install -r requirements.txt` 
+6. Install the custom `scsavailability` package by using:
+
+`pip install -e .` 
+
+Make sure that your have your directory set to `scs`.
+
+7. Change path within “DraftRunScript” to where you have saved the 3 csv files containing the static data
+8. Run “DraftRunScript.py”
+9. One the code has finished running, ensure that a “Output.csv” file has been created in the folder
+
+# Testing
+
+Test running `tox.ini` or in `scs`
+
+```
+python -m pytest -v
+```
+
 # SCS Availability
 
 ## Project Aim
