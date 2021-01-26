@@ -84,7 +84,7 @@ def run(config):
         else:
             report_end = pd.to_datetime(report_end,dayfirst=True)      
         if report_start == 'None':     
-            report_end = fa_old_max.ceil('H')
+            report_start = fa_old_max.ceil('H')
         else:
             report_start = pd.to_datetime(report_start,dayfirst=True)    
 
