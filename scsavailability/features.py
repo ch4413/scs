@@ -229,7 +229,6 @@ def add_tote_colour(scs_code):
 
 
 @logger.logger
-
 def pre_process_fa(fa,remove_same_location_faults = True,remove_warnings = True, remove_door = True):
 
     """
@@ -278,7 +277,7 @@ def pre_process_fa(fa,remove_same_location_faults = True,remove_warnings = True,
         elif i in Quad_4:
             Quad.append(4)
         else:
-            Quad.append(0)
+            Quad.append(0)      
     fa['Quadrant'] = Quad
 
     lu = load_module_lookup()
@@ -718,8 +717,6 @@ def create_PTT_df(fa_floor, at, av, weights=None):
         fa_agg = faults_aggregate(fa_sel,fault_agg_level= 'Asset Code')
         if weights != None or weights != [1]:
             fa_agg = weight_hours(df = fa_agg, weights = weights)
-    
-       
         
         av_sel, at_sel = (
             av_at_select(av, at, availability_select_options={'Pick Station': [PTT]},

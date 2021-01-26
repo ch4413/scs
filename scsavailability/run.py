@@ -4,6 +4,7 @@ from datetime import datetime
 from argparse import ArgumentParser
 import sys
 import pkg_resources as pkg
+from copy import copy
 # Import modules
 from scsavailability import results as rs, db, parser as ps, scsdata
 
@@ -82,7 +83,7 @@ def run(config):
             report_end = fa_max.ceil('H')
         else:
             report_end = pd.to_datetime(report_end,dayfirst=True)      
-        if report_start == 'None':    
+        if report_start == 'None':     
             report_end = fa_old_max.ceil('H')
         else:
             report_start = pd.to_datetime(report_start,dayfirst=True)    
@@ -102,8 +103,8 @@ def run(config):
     sc.pre_process_at()
     sc.pre_process_av()
     sc.pre_process_faults()
-    sc0 = sc
-    sc15 = sc
+    sc0 = copy(sc)
+    sc15 = copy(sc)
     sc0.floor_shift_time_fa(shift=0)
     sc15.floor_shift_time_fa(shift=15)
 
@@ -132,7 +133,6 @@ def run(config):
 
         outputs[R2] = output
         asset_nums[R2] = num_assets
-        print(output['ENTRY_TIME'])
 
     R2_sel = max(k for k, v in outputs.items())
     feat_sel = asset_nums[max(k for k, v in outputs.items())]
