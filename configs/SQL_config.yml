@@ -1,7 +1,7 @@
 path:
     source: 'SQL'
     save: '\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\'
-    package: 'Laurius to update'
+    package: 'C:\git_scs\scs\'
 
 parameters:
 

@@ -50,12 +50,14 @@ def run(config):
         # Create single connection
         conn = db.mi_db_connection()
         # Query DB using stored package queries
-        at = db.read_query(sql_conn=conn, query_path=pkg.resource_stream(__name__,
-                         'data/sql/active_totes.sql'))
-        av = db.read_query(sql_conn=conn, query_path=pkg.resource_stream(__name__,
-                         'data/sql/availability.sql'))
-        fa = db.read_query(sql_conn=conn, query_path=pkg.resource_stream(__name__,
-                         'data/sql/faults.sql'))
+        at_path = r'%sscsavailability/data/sql/active_totes.sql'%config.path.package
+        av_path = r'%sscsavailability/data/sql/availability.sql'%config.path.package
+        fa_path = r'%sscsavailability/data/sql/faults.sql'%config.path.package
+
+        at = db.read_query(sql_conn=conn, query_path=at_path)
+        av = db.read_query(sql_conn=conn, query_path=av_path)
+        fa = db.read_query(sql_conn=conn, query_path=fa_path)
+
         # Read cache
 
         fa_old = pd.read_csv(cache_path)
