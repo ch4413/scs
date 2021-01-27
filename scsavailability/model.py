@@ -120,7 +120,6 @@ def cross_validate_r2(model, X, y, n_folds=5, shuffle=True, random_state=None):
 
     return scores.mean()
 
-
 @logger.logger
 def find_features(X_train, y_train, n):
     X_train = X_train.copy()
