@@ -666,8 +666,7 @@ def merge_av_fa_at(av_df, fa_df, at_df, min_date=None, max_date=None,
         df = df.merge(at_df, how='inner', left_on=None, right_on=None,
                       left_index=True, right_index=True)
         df.reset_index(inplace=True)
-
-    if agg_level != 'None':
+    else:
         av_df = av_df[["Availability", agg_level]]
         av_df.reset_index(inplace=True)
         at_df.reset_index(inplace=True)
@@ -676,6 +675,7 @@ def merge_av_fa_at(av_df, fa_df, at_df, min_date=None, max_date=None,
         df = av_df.merge(fa_df, how='inner', on='timestamp')
         df = df.merge(at_df, how='inner', on=['timestamp', agg_level])
         df.drop([agg_level], axis=1, inplace=True)
+
     return df
 
 
