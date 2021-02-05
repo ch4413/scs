@@ -5,7 +5,7 @@
 | Field | Description |
 |-------|-------------|
 |Number |Unique number for a specific fault ID occurring in specific location |
-|Text | String containing location error description |
+|Alert| String containing location error description |
 | Entry Time | Time at which error occurred |
 | PLC | Location in the SCS |
 | Desk | Sublocation under the PLC |

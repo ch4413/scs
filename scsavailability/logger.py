@@ -5,6 +5,24 @@ logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 
 def logger(fn):
+    """
+    Summary
+    -------
+    Wraapped to log excution of functions
+    ----------
+    fn: python function
+        function to be logged
+
+    Returns
+    -------
+    inner: python function
+        wrapped funciton to log functions
+    Example
+    --------
+    @logger.logger
+    def <insert function>:
+        <define function>
+    """
     count = 0
 
     @wraps(fn)
