@@ -11,13 +11,24 @@
 
 Make sure that your have your directory set to `scs`.
 
-7. Change path within “DraftRunScript” to where you have saved the 3 csv files containing the static data
-8. Run “DraftRunScript.py”
-9. One the code has finished running, ensure that a “Output.csv” file has been created in the folder
+7. Create "run_log.csv" in scs folder with the following columns headers:
+
+-Timestamp	
+-R2	
+-Selected_Features	
+-Run_Time	
+-Report_Start	
+-Report_End
+
+# Running Model
+
+Schedule in or run in cmd the following line:
+
+"python -m scsavailability.run --config=<path of desired config from config folder in package>
 
 # Testing
 
-Test running `tox.ini` or in `scs`
+Test running `scs`
 
 ```
 python -m pytest -v

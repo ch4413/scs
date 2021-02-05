@@ -1,0 +1,18 @@
+path:
+    source: 'Test'
+    totes: './scsavailability/tests/TestData/at_test.csv'
+    availability: './scsavailability/tests/TestData/av_test.csv'
+    faults: './scsavailability/tests/TestData/fa_test.csv'
+    save: './scsavailability/tests/TestData/Test Results/'
+    package: './'
+
+parameters:
+    speed: 470
+    picker_present: 0.91
+    availability: 0.71
+
+report:
+
+    start: '2021-01-01 00:00:00'
+    end: '2022-01-01 00:00:00'
+

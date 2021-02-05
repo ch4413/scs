@@ -1,0 +1,16 @@
+path: #Area to specify data source, and input, output and package paths
+    source: 'SQL/Local/Test'
+    totes: 'Optional argument to specify data path if running local or test'
+    availability: 'Optional argument to specify data path if running local or test'
+    faults: 'Optional argument to specify data path if running local or test'
+    save: 'Path of output file save location'
+    package: 'Path of where package exists on server'
+
+parameters: #Parameters used to convert pick station downtime into lost singles
+    speed: 'Average Picker Speed, currently 470'
+    picker_present: 'Average Picker Present, currently 0.91'
+    availability: 'Average Availability of Totes, currently 0.71'
+
+report: #Area to specify reporting window
+    start: 'Datetime string of report start time, None by default'
+    end: 'Datetime string of report end time, None by default'
