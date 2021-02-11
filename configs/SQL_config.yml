@@ -3,14 +3,4 @@ path:
     save: '\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\'
     package: 'C:\git_scs\scs\'
 
-parameters:
-
-    speed: 470
-    picker_present: 0.91
-    availability: 0.71
-
-report:
-
-    start: 'None'
-    end: 'None'
 

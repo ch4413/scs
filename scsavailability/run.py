@@ -1,5 +1,6 @@
 # Dependencies
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from argparse import ArgumentParser
 import sys
@@ -28,26 +29,19 @@ def run(config):
     begin_time = datetime.now()
     # Load source, paths and reoprt window from config
     data_source = config.path.source
+    print('Running with %s data' % data_source)
     cache_path = r'%scache.csv' % config.path.package
     log_path = r'%srun_log.csv' % config.path.package
-    report_start = config.report.start
-    report_end = config.report.end
+
 
     if data_source == 'Local' or data_source == 'Test':
         # Import local data
         at = pd.read_csv(config.path.totes)
         av = pd.read_csv(config.path.availability)
         fa = pd.read_csv(config.path.faults)
-        # Add report dummies to run locally if none set
-        if report_start == 'None':
-            report_start = pd.to_datetime('2020-01-01 00:00:00', dayfirst=True)
-        else:
-            report_start = pd.to_datetime(report_start, dayfirst=True)
-        if report_end == 'None':
-            report_end = pd.to_datetime('2022-01-01 00:00:00', dayfirst=True)
-        else:
-            report_end = pd.to_datetime(report_end, dayfirst=True)
-
+        fa_max = pd.to_datetime(fa['Entry Time'], dayfirst=True).max()
+        fa_min = pd.to_datetime(fa['Entry Time'], dayfirst=True).min()
+       
     if data_source == 'SQL':
         # Create single connection
         conn = db.mi_db_connection()
@@ -68,19 +62,23 @@ def run(config):
         fa_old = pd.read_csv(cache_path)
         fa_old_max = pd.to_datetime(fa_old['Entry Time'], dayfirst=True).max()
         fa_max = pd.to_datetime(fa['Entry Time'], dayfirst=True).max()
+        fa_min = pd.to_datetime(fa['Entry Time'], dayfirst=True).min()
 
         # Check new data exists if doing an automated run
         if report_start == 'None' and report_end == 'None':
             if fa_max == fa_old_max:
                 # Populate run log showing model tried to run but no new scada
                 log = pd.read_csv(log_path)
+                run_ID = len(log) + 2
                 now = datetime.now()
                 runtime = str(now-begin_time)
                 timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-                new_row = pd.DataFrame([[timestamp_string,
+                new_row = pd.DataFrame([[run_ID,
+                                         timestamp_string,
                                          'No SCADA Data',
                                          'No SCADA Data',
                                          runtime,
+                                         'No SCADA Data',
                                          'No SCADA Data',
                                          'No SCADA Data']],
                                        columns=log.columns)
@@ -92,30 +90,6 @@ def run(config):
                 # Save current fault df to cache
                 fa.to_csv(cache_path, index=False)
 
-        # Set report end and start dates
-        if report_end == 'None':
-            report_end = fa_max.ceil('H')
-        else:
-            report_end = pd.to_datetime(report_end, dayfirst=True)
-        if report_start == 'None':
-            report_start = fa_old_max.ceil('H')
-        else:
-            report_start = pd.to_datetime(report_start, dayfirst=True)
-
-        reporting_window = report_end - report_start
-
-        # Set report start and to lastest 12 hours
-        # if cache appears to be out of date
-        if reporting_window.days > 7 \
-           and config.report.start == 'None' \
-           and config.report.end == 'None':
-            report_start = report_end - pd.to_timedelta(12, unit='H')
-            reporting_window = pd.to_timedelta(12, unit='H')
-
-    # Load pick stations parameters
-    speed = config.parameters.speed
-    picker_present = config.parameters.picker_present
-    availability = config.parameters.availability
     # Create sc object from Class
     sc = scsdata.ScsData('scs', av, at, fa)
     # Call pre-process methods
@@ -140,23 +114,11 @@ def run(config):
         if shift[i] == 0:
             # Run model and produce outputs
             output, R2, num_assets = \
-                rs.run_single_model(sc_data=sc0,
-                                    report_start=report_start,
-                                    report_end=report_end,
-                                    weights=weights[i],
-                                    speed=speed,
-                                    picker_present=picker_present,
-                                    availability=availability)
+                rs.run_single_model(sc_data=sc0, weights=weights[i])
         if shift[i] == 15:
             # Run model and produce outputs
             output, R2, num_assets = \
-                rs.run_single_model(sc_data=sc15,
-                                    report_start=report_start,
-                                    report_end=report_end,
-                                    weights=weights[i],
-                                    speed=speed,
-                                    picker_present=picker_present,
-                                    availability=availability)
+                rs.run_single_model(sc_data=sc15, weights=weights[i])
         # Populate output dictionaries
         outputs[R2] = output
         asset_nums[R2] = num_assets
@@ -170,9 +132,11 @@ def run(config):
 
     # Save output file from model with highest R2
     output = outputs[max(k for k, v in outputs.items())]
+    output.loc[:,'TIMESTAMP'] = str(fa_max.ceil('H'))
 
     # Read log
     log = pd.read_csv(log_path)
+    run_ID = len(log) + 2
     # Calculate run time
     now = datetime.now()
     runtime = str(now-begin_time)
@@ -181,25 +145,24 @@ def run(config):
 
     if data_source == 'Test':
         # Create test row
-        new_row = pd.DataFrame([[timestamp_string, 'Test', 'Test', runtime,
-                                 'Test', 'Test']], columns=log.columns)
+        new_row = pd.DataFrame([[run_ID, timestamp_string, 'Test', 'Test', runtime, 'Test', 'Test','Test','Test']],
+                               columns=log.columns)
     else:
         # Create run metric row
-        new_row = pd.DataFrame([[timestamp_string, R2_sel, feat_sel, runtime,
-                                 report_start, report_end]],
+        new_row = pd.DataFrame([[run_ID, timestamp_string, R2_sel, feat_sel, runtime, fa_min.floor('H'), fa_max.ceil('H'), np.nan]],
                                columns=log.columns)
     # Append new row and save run log to folder
     new_log = log.append(new_row, ignore_index=True)
     new_log.to_csv(log_path, index=False)
 
     # Save output to landing zone
-    save_path = r'%sML_output_%s.csv' % (config.path.save, timestamp_string)
+    save_path = r'%s/outputs/ML_output_%d.csv' % (config.path.package, run_ID)
     output.to_csv(save_path, index=False)
 
 
 if __name__ == '__main__':
 
-    print('running with config')
+    print('Running with Config')
     parser = ArgumentParser(description="Running Pipeline")
     parser.add_argument('--config', required=True,
                         help='path of the YAML file with the configuration')

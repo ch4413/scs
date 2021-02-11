@@ -235,11 +235,13 @@ def add_code(data):
     # Asset code matching patterns extracted from Alert Columns
     scs['Asset Code'] = scs['Alert'].str.extract(
         r'(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
-    scs['Asset Code'] = scs['Alert'].str.extract(
-        r'([A-Z][0-9]{4}[A-zZ]{3}[0-9]{3})')
-    scs.loc[scs['PLC'].str.contains(
-        r'SCS', regex=True), 'Asset Code'] = scs.loc[scs['PLC'].str.contains(
-            r'SCS', regex=True), 'Desk']
+    scs['Asset Code'] = scs['Asset Code'].str.replace(" ", "")
+    # Extract PTT asset codes
+    scs.loc[scs['Alert'].str.contains('PTT'), 'Asset Code'] = scs.loc[scs['Alert'].str.contains('PTT')]['Alert'].str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0]
+    scs.loc[scs['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = (
+        scs.loc[scs['Alert']
+               .str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert']
+        .str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', ''))
     # Left over ones label with same code as their PLC label
     scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
     return scs
@@ -295,13 +297,14 @@ def add_tote_colour(scs_code):
     df_totes.loc[df_totes['Area'].isnull() * df_totes['Desk'] == 'Z',
                  'Area'] = 'PLC External'
     # Label any faults which haven't been mapped to an area
-    df_totes['Area'] = df_totes['Area'].fillna('Fault Not Found')
+    df_totes['Area'] = df_totes['Area'].fillna('Unknown')
 
     # Create a dataframe of unmapped assets
     unmapped = df_totes[df_totes['Area'] == 'Fault Not Found']['Asset Code'].value_counts().reset_index().copy()
     unmapped = unmapped.rename(columns={'index': 'Asset', 'Asset Code': 'Occurrence'})
-    # Map unknown to Both
-    df_totes.loc[df_totes['Tote Colour'].isna(), 'Tote Colour'] = 'Both'
+    # Map PLC external to both and label unknowns
+    df_totes.loc[df_totes['Area'] == 'PLC External', 'Tote Colour'] = 'Both'
+    df_totes['Tote Colour'] = df_totes['Tote Colour'].fillna('Unknown')
 
     return df_totes, unmapped
 
@@ -423,15 +426,6 @@ def pre_process_fa(fa, remove_same_location_faults=True, remove_warnings=True, r
 
     # Remove module number for Quadrant loop faults
     fa.loc[fa['Loop'] == 'Quadrant', 'MODULE'] = np.nan
-    # Extract PTT asset codes
-    fa.loc[fa['Alert'].str.contains('PTT'), 'Asset Code'] = (
-        fa.loc[fa['Alert']
-               .str.contains('PTT')]['Alert']
-        .str.extract(r'(C[0-9]{2}PTT[0-9]{3})')[0])
-    fa.loc[fa['Alert'].str.contains(r'C[0-9]{4}PTT[0-9]{3}'), 'Asset Code'] = (
-        fa.loc[fa['Alert']
-               .str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert']
-        .str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', ''))
 
     # Drop ECB Faults
     fa = fa[~fa['PLC'].isin(['C17', 'SCSM22'])]
@@ -1002,6 +996,7 @@ def create_PTT_df(fa_floor, at, av, weights=None):
         # Append dataframe to df_PTT
         df_PTT = pd.concat([df_PTT, df], axis=0, join='outer', sort=False)
         # Append fault dataframe to fa_PTT
+        fa_sel = fa_floor['Asset Code'].unique()
         fa_PTT.append(fa_sel)
 
     # Create fa_PTT dictionary with pick station as keys and fa dataframes as values

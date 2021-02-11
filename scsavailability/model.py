@@ -177,6 +177,7 @@ def find_features(X_train, y_train, n):
         # Remove top n p_values from features
         rm_col = list(results.pvalues.sort_values(ascending=False).head(n).index)
         X_train = X_train.drop(rm_col, axis=1)
+        #print(X_train.shape[1])
     return X_train.columns
 
 
