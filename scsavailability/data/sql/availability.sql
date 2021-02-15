@@ -2,55 +2,45 @@
 Pulls latest Availability data
 ***/
 
-with mindate as (select max(entry_time) maxdate, max(entry_time)-14 mindate from stage.scadadata)
+with mindate as (select max(convert(datetime,[Entry Time])) maxdate, max(convert(datetime,[Entry Time]))-14 mindate from SOLAR.newton_AzurePrep_SCADAArchive)
 
 , avail as (
 select distinct
-t.[Pick Station]
-,t.date 
-,case when g.time is null then 0 else g.time end work_avail_picker_present
-,case when a.time is null then 0 else a.time end work_avail_picker_absent
-,case when r.time is null then 0 else r.time end work_unvail
-from ods.stage.Newton_availability t
-left join ods.stage.Newton_availability g on
-t.date = g.date
-and t.[Pick Station]= g.[Pick Station]
-and g.Category = 'Work Avail Picker Present'
-left join ods.stage.Newton_availability a on
-t.date = a.date
-and t.[Pick Station]= a.[Pick Station]
-and a.Category = 'Work Avail Picker Absent'
-left join ods.stage.Newton_availability r on
-t.date = r.date
-and t.[Pick Station]= r.[Pick Station]
-and r.Category = 'Work Unvail'
+t.PTT [Pick Station]
+,t.hour date
+,case when g.time_allocated is null then 0 else g.time_allocated end work_avail_picker_present
+,case when a.time_allocated is null then 0 else a.time_allocated end work_avail_picker_absent
+,case when r.time_allocated is null then 0 else r.time_allocated end work_unvail
+from SOLAR.newton_AzurePrep_Availability t
+left join SOLAR.newton_AzurePrep_Availability g on
+t.hour = g.hour
+and t.PTT = g.PTT
+and g.time_cat = 'Work Avail Picker Present'
+left join SOLAR.newton_AzurePrep_Availability a on
+t.hour = a.hour
+and t.PTT = a.PTT
+and a.time_cat = 'Work Avail Picker Absent'
+left join SOLAR.newton_AzurePrep_Availability r on
+t.hour = r.hour
+and t.PTT = r.PTT
+and r.time_cat = 'Work Unvail'
 )
 
-, merging as (
+, output as (
 select
-w.date
-,w.[Pick Station]
-,a.work_avail_picker_absent
-,a.work_avail_picker_present
-,a.work_unvail
-from ods.stage.Newton_Waste_Tput w
-left join avail a on
-a.date = w.date
-and a.[Pick Station] = w.[Pick Station]
-)
-
-, output1 as (
-select
-merging.*
-,case when (work_avail_picker_absent+work_avail_picker_present+work_unvail)=0 then 0 else (work_avail_picker_present+work_avail_picker_absent)/(work_avail_picker_absent+work_avail_picker_present+work_unvail) end as availability
-from merging
+avail.*
+,case	when	(work_avail_picker_absent+work_avail_picker_present+work_unvail) = 0
+		then	0 
+		else	(work_avail_picker_present+work_avail_picker_absent)/(work_avail_picker_absent+work_avail_picker_present+work_unvail)
+		end		availability
+from avail
 )
 
 select 
 Date as timestamp
 ,[Pick Station]
 ,Availability
-from output1 o
+from output o
 left join mindate on 1=1
 where date > mindate.mindate
 and date <= mindate.maxdate

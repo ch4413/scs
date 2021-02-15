@@ -2,7 +2,7 @@ import pandas as pd
 import pyodbc
 
 
-def get_credentials(filepath='../data/sql_password.txt'):
+def get_credentials(filepath='../data/sql/sql_password.txt'):
     """
     Summary
     -------
@@ -43,9 +43,12 @@ def mi_db_connection():
     sql_conn = db_connect('dbname', 'myuser', 'mypass')
     """
     sql_conn = pyodbc.connect('Driver={SQL Server};'
-                              'Server=MSHSRMNSUKP1405;'
+                              'Server=mshsrmnsukc0139;'
                               'Database=ODS;'
-                              'as_dataframe=True')
+                              'as_dataframe=True;'
+                              'UID=DS_NewtonSQLCATE;'
+                              'PWD=Tu35day@01')
+   # insert password as PWD and username as UID                           
     return sql_conn
 
 

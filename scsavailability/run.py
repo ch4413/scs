@@ -69,7 +69,7 @@ def run(config):
             if fa_max == fa_old_max:
                 # Populate run log showing model tried to run but no new scada
                 log = pd.read_csv(log_path)
-                run_ID = len(log) + 2
+                run_ID = max(log['Run_ID']) + 1
                 now = datetime.now()
                 runtime = str(now-begin_time)
                 timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")

@@ -106,25 +106,17 @@ class ModelTests:
         r2_oos, coeff, num_assets = md.run_OLS(X_train=X_train, y_train=y_train,
                                                X_test=X_test, y_test=y_test, n=1)
 
-        r2_oos_expected = 0.3502618808968243
+        r2_oos = round(r2_oos,2)
+        r2_oos_expected = 0.35
+        coeff['Coefficient'] = coeff['Coefficient'].apply(lambda x:round(x,2))
         coeff_expected = pd.DataFrame({'Asset Code': {0: 'volatile acidity',
                                                     1: 'chlorides',
                                                     2: 'total sulfur dioxide',
                                                     3: 'pH'},
-                                        'Coefficient': {0: -1.0202262060497325,
-                                                    1: -1.8663562723712817,
-                                                    2: -0.0024560763114127764,
-                                                    3: -0.2875647261676315}})
+                                        'Coefficient': {0: -1.02,
+                                                    1: -1.87,
+                                                    2: 0.00,
+                                                    3: -0.29}})
         num_assets_expected = 4
 
         assert r2_oos == r2_oos_expected and coeff.equals(coeff_expected) and num_assets == num_assets_expected
-
-
-
-
-
-
-
-
-        
-

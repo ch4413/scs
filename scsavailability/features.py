@@ -232,6 +232,9 @@ def add_code(data):
     scs = add_code(data)
     """
     scs = data.copy()
+    # Extracts PLC Numbers
+    scs['PLCN'] = scs['PLC'].str.extract(
+        r'((?<=C)[0-9]{2})').fillna(0).astype('int')
     # Asset code matching patterns extracted from Alert Columns
     scs['Asset Code'] = scs['Alert'].str.extract(
         r'(^[A-Z]{3}[0-9]{3}|[A-Z][0-9]{4}[A-Z]{3}[0-9]{3}|[A-Z]{3} [A-Z][0-9]{2})')
@@ -242,8 +245,13 @@ def add_code(data):
         scs.loc[scs['Alert']
                .str.contains(r'C[0-9]{4}PTT[0-9]{3}')]['Alert']
         .str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', ''))
+    # Label destackers/stackers as PLC    
+    scs.loc[scs['PLCN'] > 34,
+                 'Asset Code'] = scs.loc[scs['PLCN'] > 34,
+                 'PLC']    
     # Left over ones label with same code as their PLC label
-    scs.loc[scs['Asset Code'].isna(), 'Asset Code'] = scs.loc[scs['Asset Code'].isna(), 'PLC']
+    scs.loc[(scs['Asset Code'].isna()) & (scs['Desk'] == 'Z'), 'Asset Code'] = scs.loc[(scs['Asset Code'].isna()) & (scs['Desk']=='Z'), 'Alert'].apply(lambda x:x.split(':')[1].strip())
+    scs['Asset Code'].fillna('Unable to extract')
     return scs
 
 
@@ -283,9 +291,6 @@ def add_tote_colour(scs_code):
         r'(PTT[0-9]{3})').fillna(False)
     df_totes.loc[(df_totes['Pick Station'] != False),
                  'Tote Colour'] = 'Both'
-    # Extracts PLC Numbers
-    df_totes['PLCN'] = df_totes['PLC'].str.extract(
-        r'((?<=C)[0-9]{2})').fillna(0).astype('int')
     # Label destacker/stacker faults as blue
     df_totes.loc[df_totes['PLCN'] > 34,
                  'Tote Colour'] = 'Blue'
@@ -300,7 +305,7 @@ def add_tote_colour(scs_code):
     df_totes['Area'] = df_totes['Area'].fillna('Unknown')
 
     # Create a dataframe of unmapped assets
-    unmapped = df_totes[df_totes['Area'] == 'Fault Not Found']['Asset Code'].value_counts().reset_index().copy()
+    unmapped = df_totes[df_totes['Area'] == 'Unknown']['Asset Code'].value_counts().reset_index().copy()
     unmapped = unmapped.rename(columns={'index': 'Asset', 'Asset Code': 'Occurrence'})
     # Map PLC external to both and label unknowns
     df_totes.loc[df_totes['Area'] == 'PLC External', 'Tote Colour'] = 'Both'

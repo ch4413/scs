@@ -239,7 +239,7 @@ def run_OLS(X_train, y_train, X_test, y_test, n, n_folds=5):
     keep_features = find_features(X_train=X_train, y_train=y_train, n=n)
 
     # Run OLS model with selected features
-    model = sm.OLS(y_train, X_train[keep_features])
+    model = sm.OLS(y_train, sm.add_constant(X_train[keep_features]))
     results = model.fit()
 
     # Perform cross validation
