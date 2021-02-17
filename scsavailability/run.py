@@ -172,7 +172,7 @@ def run(config):
     if data_source=='Test':
         save_path = r'%s/scsavailability/tests/TestData/TestResults/ML_test_output_%d.csv' % (config.path.package, run_ID)
     else:
-        save_path = r'%s/outputs/ML_output_%d.csv' % (config.path.package, run_ID)
+        save_path = r'%s/outputs/ML_Output_%d.csv' % (config.path.package, run_ID)
 
     output.to_csv(save_path, index=False)
 

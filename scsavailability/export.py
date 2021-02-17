@@ -30,6 +30,7 @@ def export(config):
     """
     # Load path and source
     log_path = r'%srun_log.csv' % config.path.package
+    output_path = r'%outputs.csv' % config.path.package
     data_source = config.path.source
 
     # Set count and flag
@@ -38,19 +39,19 @@ def export(config):
     while load==0:
         # Whilst no file has been loaded, check if a file with 
         # ML_Output_x format is in outputs folder
-        if list(Path(r"C:\Users\Jamie.williams\Desktop\scs\outputs").glob("ML_Output_*.csv")):
-            for filename in Path(r"C:\Users\Jamie.williams\Desktop\scs\outputs").glob("*.csv"):
+        if list(Path(output_path).glob("ML_Output_*.csv")):
+            for filename in Path(output_path).glob("*.csv"):
                 # For each file found, read the data and move to the archive folder
                 coeff = pd.read_csv(filename)
                 shutil.move(str(filename), config.path.package + 'outputs/Archive')
                 # Extract Run ID from file name
-                run_ID = re.findall('ML_output_[0-9]+',str(filename))[0].split('_')[-1]
+                run_ID = re.findall('ML_Output_[0-9]+',str(filename))[0].split('_')[-1]
                 if data_source == 'Local' or data_source == 'Test':
                     # If exporting to local folder, load current time
                     now = datetime.now()
                     timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
                     # Set save path from config and save file in folder with timestamp in name
-                    save_path = r'%sML_output_%s.csv' % (config.path.save, timestamp_string)
+                    save_path = r'%sML_Output_%s.csv' % (config.path.save, timestamp_string)
                     coeff.to_csv(save_path, index=False)
                 elif data_source == 'SQL':
                     # If exporting direct to SQL, load output query
@@ -68,7 +69,7 @@ def export(config):
                     keep='last')
                     # Remove any coefficients that are more than 2 months old
                     date_thres = pd.to_datetime("today") - pd.to_timedelta(60,unit='days')
-                    new_sql = new_sql[pd.to_datetime(new_sql['TIMESTAMP'],day_first=True) > date_thres]
+                    new_sql = new_sql[pd.to_datetime(new_sql['TIMESTAMP'],dayfirst=True) > date_thres]
                     # Sort and replace old table with new values in SQL
                     new_sql.sort_values('PTT', inplace=True)
                     new_sql.to_sql('SOLAR.newton_AzurePrep_MLCoefficients',conn,if_exists='replace',index=False)
