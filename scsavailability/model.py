@@ -262,7 +262,7 @@ def run_OLS(X_train, y_train, X_test, y_test, n, n_folds=5):
     coefficients.rename(columns={'index': 'Asset Code'}, inplace=True)
 
     # Calucate OOS R2 Score
-    OutY_Predicted = results.predict(X_test[keep_features])
+    OutY_Predicted = results.predict(sm.add_constant(X_test[keep_features]))
     r2_oos = r2_score(y_test, OutY_Predicted)
     print(r2_oos)
 

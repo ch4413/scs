@@ -101,22 +101,20 @@ class ModelTests:
         y = data['quality']
         X = data.drop('quality',axis=1)
 
-        X_train, X_test, y_train, y_test = md.split(X, y, split_options={'test_size': 0.3, 'random_state': 42})
+        X_train, X_test, y_train, y_test = md.split(X, y, split_options={'test_size': 0.3, 'random_state': 111})
 
         r2_oos, coeff, num_assets = md.run_OLS(X_train=X_train, y_train=y_train,
                                                X_test=X_test, y_test=y_test, n=1)
 
         r2_oos = round(r2_oos,2)
-        r2_oos_expected = 0.35
+        r2_oos_expected = 0.33
         coeff['Coefficient'] = coeff['Coefficient'].apply(lambda x:round(x,2))
         coeff_expected = pd.DataFrame({'Asset Code': {0: 'volatile acidity',
                                                     1: 'chlorides',
-                                                    2: 'total sulfur dioxide',
-                                                    3: 'pH'},
-                                        'Coefficient': {0: -1.02,
-                                                    1: -1.87,
-                                                    2: 0.00,
-                                                    3: -0.29}})
-        num_assets_expected = 4
+                                                    2: 'total sulfur dioxide'},
+                                        'Coefficient': {0: -1.23,
+                                                    1: -1.62,
+                                                    2: -0.00}})
+        num_assets_expected = 3
 
         assert r2_oos == r2_oos_expected and coeff.equals(coeff_expected) and num_assets == num_assets_expected

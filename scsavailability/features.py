@@ -247,10 +247,11 @@ def add_code(data):
         .str.extract('(C[0-9]{4}PTT[0-9]{3})')[0].str.replace('02', ''))
     # Label destackers/stackers as PLC    
     scs.loc[scs['PLCN'] > 34,
-                 'Asset Code'] = scs.loc[scs['PLCN'] > 34,
-                 'PLC']    
-    # Left over ones label with same code as their PLC label
+            'Asset Code'] = scs.loc[scs['PLCN'] > 34,
+            'PLC']    
+    # Label PLC External
     scs.loc[(scs['Asset Code'].isna()) & (scs['Desk'] == 'Z'), 'Asset Code'] = scs.loc[(scs['Asset Code'].isna()) & (scs['Desk']=='Z'), 'Alert'].apply(lambda x:x.split(':')[1].strip())
+    # Label any that didn't match any of the patterns
     scs['Asset Code'].fillna('Unable to extract')
     return scs
 

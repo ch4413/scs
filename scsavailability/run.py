@@ -27,7 +27,7 @@ def run(config):
     """
     # Set run start time
     begin_time = datetime.now()
-    # Load source, paths and reoprt window from config
+    # Load source and paths from config
     data_source = config.path.source
     print('Running with %s data' % data_source)
     cache_path = r'%scache.csv' % config.path.package
@@ -39,6 +39,7 @@ def run(config):
         at = pd.read_csv(config.path.totes)
         av = pd.read_csv(config.path.availability)
         fa = pd.read_csv(config.path.faults)
+        # Save the input data time window
         fa_max = pd.to_datetime(fa['Entry Time'], dayfirst=True).max()
         fa_min = pd.to_datetime(fa['Entry Time'], dayfirst=True).min()
        
@@ -65,30 +66,29 @@ def run(config):
         fa_min = pd.to_datetime(fa['Entry Time'], dayfirst=True).min()
 
         # Check new data exists if doing an automated run
-        if report_start == 'None' and report_end == 'None':
-            if fa_max == fa_old_max:
-                # Populate run log showing model tried to run but no new scada
-                log = pd.read_csv(log_path)
-                run_ID = max(log['Run_ID']) + 1
-                now = datetime.now()
-                runtime = str(now-begin_time)
-                timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-                new_row = pd.DataFrame([[run_ID,
-                                         timestamp_string,
-                                         'No SCADA Data',
-                                         'No SCADA Data',
-                                         runtime,
-                                         'No SCADA Data',
-                                         'No SCADA Data',
-                                         'No SCADA Data']],
-                                       columns=log.columns)
-                new_log = log.append(new_row, ignore_index=True)
-                new_log.to_csv(log_path, index=False)
-                # Exit code
-                sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
-            else:
-                # Save current fault df to cache
-                fa.to_csv(cache_path, index=False)
+        if fa_max == fa_old_max:
+            # Populate run log showing model tried to run but no new scada
+            log = pd.read_csv(log_path)
+            run_ID = max(log['Run_ID']) + 1
+            now = datetime.now()
+            runtime = str(now-begin_time)
+            timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+            new_row = pd.DataFrame([[run_ID,
+                                        timestamp_string,
+                                        'No SCADA Data',
+                                        'No SCADA Data',
+                                        runtime,
+                                        'No SCADA Data',
+                                        'No SCADA Data',
+                                        'No SCADA Data']],
+                                    columns=log.columns)
+            new_log = log.append(new_row, ignore_index=True)
+            new_log.to_csv(log_path, index=False)
+            # Exit code
+            sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
+        else:
+            # Save current fault df to cache
+            fa.to_csv(cache_path, index=False)
 
     # Create sc object from Class
     sc = scsdata.ScsData('scs', av, at, fa)
@@ -145,7 +145,7 @@ def run(config):
 
     if data_source == 'Test':
         # Create test row
-        new_row = pd.DataFrame([[run_ID, timestamp_string, 'Test', 'Test', runtime, 'Test', 'Test','Test','Test']],
+        new_row = pd.DataFrame([[run_ID, timestamp_string, 'Test', 'Test', runtime, 'Test', 'Test','Test']],
                                columns=log.columns)
     else:
         # Create run metric row
@@ -156,16 +156,22 @@ def run(config):
     new_log.to_csv(log_path, index=False)
 
     # Save output to landing zone
-    save_path = r'%s/outputs/ML_output_%d.csv' % (config.path.package, run_ID)
+    if data_source=='Test':
+        save_path = r'%s/scsavailability/tests/TestData/TestResults/ML_test_output_%d.csv' % (config.path.package, run_ID)
+    else:
+        save_path = r'%s/outputs/ML_output_%d.csv' % (config.path.package, run_ID)
+
     output.to_csv(save_path, index=False)
 
 
 if __name__ == '__main__':
 
     print('Running with Config')
+    # Load data from config file
     parser = ArgumentParser(description="Running Pipeline")
     parser.add_argument('--config', required=True,
                         help='path of the YAML file with the configuration')
     args = parser.parse_args()
     config_value = ps.parse_config(args.config)
+    # Run the model with the config data
     run(config_value)
