@@ -1,7 +1,5 @@
 # Getting Started
 
-HELLLLOOOOOOO DAN
-
 1. Change directory to where the scs folder is saved
 2. `conda create --name scs_env` 
 3. `conda activate scs_env` 

@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 import re
 import shutil
+import urllib
+from sqlalchemy import create_engine
 # Import modules
 from scsavailability import db, parser as ps
 
@@ -30,7 +32,7 @@ def export(config):
     """
     # Load path and source
     log_path = r'%srun_log.csv' % config.path.package
-    output_path = r'%outputs.csv' % config.path.package
+    output_path = r'%s\outputs' % config.path.package
     data_source = config.path.source
 
     # Set count and flag
@@ -46,6 +48,7 @@ def export(config):
                 shutil.move(str(filename), config.path.package + 'outputs/Archive')
                 # Extract Run ID from file name
                 run_ID = re.findall('ML_Output_[0-9]+',str(filename))[0].split('_')[-1]
+                print('Attempting to Export Run %s Output' %run_ID)
                 if data_source == 'Local' or data_source == 'Test':
                     # If exporting to local folder, load current time
                     now = datetime.now()
@@ -72,11 +75,16 @@ def export(config):
                     new_sql = new_sql[pd.to_datetime(new_sql['TIMESTAMP'],dayfirst=True) > date_thres]
                     # Sort and replace old table with new values in SQL
                     new_sql.sort_values('PTT', inplace=True)
-                    new_sql.to_sql('SOLAR.newton_AzurePrep_MLCoefficients',conn,if_exists='replace',index=False)
+                    db.output_to_sql(output=new_sql,
+                                     sql_conn=conn,
+                                     tablename='newton_AzurePrep_MLCoefficients',
+                                     schema='SOLAR')
 
                 # If successfully exported, load log
                 log = pd.read_csv(log_path)
                 # Fill in export time for row matching Run ID extracted from file
+                now = datetime.now()
+                timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
                 log.loc[log['Run_ID']==int(run_ID),'Export_time'] = timestamp_string
                 # Write log back to scs folder
                 log.to_csv(log_path, index=False)
@@ -86,8 +94,9 @@ def export(config):
             # If no file in outputs
             attempt=attempt+1
             if attempt<10:
+                print('No file matching format, attempted to load %d times, will try again in 5 mins' %attempt)
                 # If less than 10 attempts, wait 5 minutes and try again
-                time.sleep(240)
+                time.sleep(300)
             else:
                 # Once 10 attempts have been tried, load log
                 log = pd.read_csv(log_path)
