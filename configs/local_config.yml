@@ -1,5 +1,6 @@
+source: 'Local'
+mode: 'Manual'
 path:
-    source: 'Local'
     totes: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/at_prod.csv'
     availability: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/av_prod.csv'
     faults: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/fa_dec_jan.csv'

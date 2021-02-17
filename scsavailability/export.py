@@ -72,8 +72,15 @@ def export(config):
                     # Sort and replace old table with new values in SQL
                     new_sql.sort_values('PTT', inplace=True)
                     new_sql.to_sql('SOLAR.newton_AzurePrep_MLCoefficients',conn,if_exists='replace',index=False)
-                # Set load flag to 1 to exit loop
-                load = 1
+
+                # If successfully exported, load log
+                log = pd.read_csv(log_path)
+                # Fill in export time for row matching Run ID extracted from file
+                log.loc[log['Run_ID']==int(run_ID),'Export_time'] = timestamp_string
+                # Write log back to scs folder
+                log.to_csv(log_path, index=False)
+            # Set load flag to 1 to exit loop
+            load = 1
         else:
             # If no file in outputs
             attempt=attempt+1
@@ -88,13 +95,6 @@ def export(config):
                 log.to_csv(log_path, index=False)
                 # Exit code with error message
                 sys.exit('File Did Not Appear in Outputs Folder')
-    # If successfully exported, load log
-    log = pd.read_csv(log_path)
-    # Fill in export time for row matching Run ID extracted from file
-    log.loc[log['Run_ID']==int(run_ID),'Export_time'] = timestamp_string
-    # Write log back to scs folder
-    log.to_csv(log_path, index=False)
-
 
 if __name__ == '__main__':
 

@@ -1,8 +1,10 @@
+source: 'SQL/Local/Test'
+mode: 'Automated/Manual' #Automated checks cache, manual ignores
 path: #Area to specify data source, and input, output and package paths
-    source: 'SQL/Local/Test'
     totes: 'Optional argument to specify data path if running local or test'
     availability: 'Optional argument to specify data path if running local or test'
     faults: 'Optional argument to specify data path if running local or test'
     save: 'Path of output file save location'
+    # First 4 only required if running local or test
     package: 'Path of where package exists on server'
 

@@ -27,8 +27,9 @@ def run(config):
     """
     # Set run start time
     begin_time = datetime.now()
-    # Load source and paths from config
-    data_source = config.path.source
+    # Load source, mode and paths from config
+    data_source = config.source
+    mode = config.mode
     print('Running with %s data' % data_source)
     cache_path = r'%scache.csv' % config.path.package
     log_path = r'%srun_log.csv' % config.path.package
@@ -64,31 +65,34 @@ def run(config):
         fa_old_max = pd.to_datetime(fa_old['Entry Time'], dayfirst=True).max()
         fa_max = pd.to_datetime(fa['Entry Time'], dayfirst=True).max()
         fa_min = pd.to_datetime(fa['Entry Time'], dayfirst=True).min()
-
-        # Check new data exists if doing an automated run
-        if fa_max == fa_old_max:
-            # Populate run log showing model tried to run but no new scada
-            log = pd.read_csv(log_path)
-            run_ID = max(log['Run_ID']) + 1
-            now = datetime.now()
-            runtime = str(now-begin_time)
-            timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-            new_row = pd.DataFrame([[run_ID,
-                                        timestamp_string,
-                                        'No SCADA Data',
-                                        'No SCADA Data',
-                                        runtime,
-                                        'No SCADA Data',
-                                        'No SCADA Data',
-                                        'No SCADA Data']],
-                                    columns=log.columns)
-            new_log = log.append(new_row, ignore_index=True)
-            new_log.to_csv(log_path, index=False)
-            # Exit code
-            sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
-        else:
-            # Save current fault df to cache
-            fa.to_csv(cache_path, index=False)
+        if mode == "Automated":
+            # Check new data exists if doing an automated run
+            if fa_max == fa_old_max:
+                # Populate run log showing model tried to run but no new scada
+                log = pd.read_csv(log_path)
+                if len(log)>0:
+                    run_ID = max(log['Run_ID']) + 1
+                else:
+                    run_ID = 1
+                now = datetime.now()
+                runtime = str(now-begin_time)
+                timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+                new_row = pd.DataFrame([[run_ID,
+                                            timestamp_string,
+                                            'No SCADA Data',
+                                            'No SCADA Data',
+                                            runtime,
+                                            'No SCADA Data',
+                                            'No SCADA Data',
+                                            'No SCADA Data']],
+                                        columns=log.columns)
+                new_log = log.append(new_row, ignore_index=True)
+                new_log.to_csv(log_path, index=False)
+                # Exit code
+                sys.exit('SCADA DATA NOT UPLOADED, MODEL DID NOT RUN')
+            else:
+                # Save current fault df to cache
+                fa.to_csv(cache_path, index=False)
 
     # Create sc object from Class
     sc = scsdata.ScsData('scs', av, at, fa)
@@ -113,12 +117,18 @@ def run(config):
     for i in range(len(weights)):
         if shift[i] == 0:
             # Run model and produce outputs
-            output, R2, num_assets = \
-                rs.run_single_model(sc_data=sc0, weights=weights[i])
+            try:
+                output, R2, num_assets = \
+                    rs.run_single_model(sc_data=sc0, weights=weights[i])
+            except:
+                continue
         if shift[i] == 15:
             # Run model and produce outputs
-            output, R2, num_assets = \
-                rs.run_single_model(sc_data=sc15, weights=weights[i])
+            try:
+                output, R2, num_assets = \
+                    rs.run_single_model(sc_data=sc0, weights=weights[i])
+            except:
+                continue  
         # Populate output dictionaries
         outputs[R2] = output
         asset_nums[R2] = num_assets
@@ -136,7 +146,10 @@ def run(config):
 
     # Read log
     log = pd.read_csv(log_path)
-    run_ID = len(log) + 2
+    if len(log)>0:
+        run_ID = max(log['Run_ID']) + 1
+    else:
+        run_ID = 1
     # Calculate run time
     now = datetime.now()
     runtime = str(now-begin_time)

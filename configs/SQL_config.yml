@@ -1,5 +1,6 @@
+source: 'SQL'
+mode: 'Automated'
 path:
-    source: 'SQL'
     save: '\\mshsrmnsukp1405\File Landing Zone\SCADA\Outputs\'
     package: 'C:\git_scs\scs\'
 

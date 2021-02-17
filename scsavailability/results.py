@@ -38,10 +38,11 @@ def create_output(fa_PTT, coeff):
         coeff = coeff.copy()
         # Merge coefficients to fault dataframe
         df = coeff[coeff['Asset Code'].isin(x[1])]
-        # Add pickstation column
-        df.loc[:, 'PTT'] = str(x[0])
-        # Join dataframes together for each pick station
-        output = pd.concat([output, df], join='outer', ignore_index=True)
+        if len(df)>0:
+            # Add pickstation column
+            df.loc[:, 'PTT'] = str(x[0])
+            # Join dataframes together for each pick station
+            output = pd.concat([output, df], join='outer', ignore_index=True)
 
     output.rename(columns={'Asset Code': 'ID', 'Coefficient': 'COEFFICIENT'},
                   inplace=True)
