@@ -37,10 +37,11 @@ def create_output(fa_PTT, coeff):
         x = copy(x)
         coeff = coeff.copy()
         # Merge coefficients to fault dataframe
-        df = coeff[coeff['Asset Code'].isin(x[1])]
+        df = coeff.loc[coeff['Asset Code'].isin(x[1])]
         if len(df)>0:
+            df = df.copy()
             # Add pickstation column
-            df.loc[:, 'PTT'] = str(x[0])
+            df.loc[:,'PTT'] = str(x[0])
             # Join dataframes together for each pick station
             output = pd.concat([output, df], join='outer', ignore_index=True)
 
@@ -92,7 +93,7 @@ def run_single_model(*, sc_data, weights):
         r2_oos, coeff, num_assets = md.run_OLS(X_train=X_train,
                                                y_train=y_train,
                                                X_test=X_test,
-                                               y_test=y_test, n=100)
+                                               y_test=y_test, n=30)
     # Creates output dataframe
     output = rs.create_output(fa_PTT, coeff)
 

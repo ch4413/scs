@@ -11,7 +11,6 @@ class ExportTests:
     def test_export(self):
         output = pd.read_csv("./scsavailability/tests/TestData/ML_Test_Output.csv")
         output.to_csv("./outputs/ML_Output_999999.csv")
-        os.system("python -m scsavailability.export --config=./scsavailability/tests/TestData/test_config.yml")
         log = pd.read_csv("./run_log.csv")
         new_row = pd.DataFrame([[999999, 'Exp Test', 'Exp Test', 'Exp Test', 'Exp Test', 'Exp Test', 'Exp Test','Not exported yet']],
                                columns=log.columns)

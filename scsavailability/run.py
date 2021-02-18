@@ -121,6 +121,7 @@ def run(config):
                 output, R2, num_assets = \
                     rs.run_single_model(sc_data=sc0, weights=weights[i])
             except:
+                print('Error occurred, skipping to next iteration')
                 continue
         if shift[i] == 15:
             # Run model and produce outputs
@@ -128,7 +129,9 @@ def run(config):
                 output, R2, num_assets = \
                     rs.run_single_model(sc_data=sc0, weights=weights[i])
             except:
-                continue  
+                print('Error occurred, skipping to next iteration')
+                continue
+                
         # Populate output dictionaries
         outputs[R2] = output
         asset_nums[R2] = num_assets

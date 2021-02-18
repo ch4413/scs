@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 import pkg_resources
 from . import logger
 
+
 @logger.logger
 def get_credentials():
     """
@@ -30,6 +31,7 @@ def get_credentials():
         user, password = f.readlines()[0].split()
     return user, password
 
+
 @logger.logger
 def mi_db_connection():
     """
@@ -55,6 +57,7 @@ def mi_db_connection():
                                                  
     sql_conn = create_engine("mssql+pyodbc:///?odbc_connect=%s" % params)                        
     return sql_conn
+
 
 @logger.logger
 def read_query(sql_conn, query_path='../sql/test_query.sql'):
@@ -83,6 +86,7 @@ def read_query(sql_conn, query_path='../sql/test_query.sql'):
     df = pd.read_sql(query, sql_conn)
 
     return df
+
 
 @logger.logger
 def output_to_sql(output, sql_conn, tablename='newton_AzurePrep_MLCoefficients',schema='SOLAR'):

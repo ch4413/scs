@@ -1,8 +1,8 @@
 source: 'Local'
 mode: 'Manual'
 path:
-    totes: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/at_prod.csv'
-    availability: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/av_prod.csv'
-    faults: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/fa_dec_jan.csv'
+    totes: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Dan_Data/active_totes.csv'
+    availability: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Dan_Data/availability.csv'
+    faults: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Data/Dan_Data/SCADA_faults.csv'
     save: 'C:/Users/Jamie.williams/OneDrive - Newton Europe Ltd/Castle Donnington/Results/'
     package: 'C:/Users/jamie.williams/desktop/scs/'

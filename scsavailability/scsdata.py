@@ -26,7 +26,7 @@ class ScsData():
     def floor_shift_time_fa(self, shift=0):
         self.fa_processed = feat.floor_shift_time_fa(self.fa_processed,
                                                      shift=shift)
-        print('fa_processed update with time shift')
+        print('fa_processed updated with %d min time shift' %shift)
 
     def create_ptt_df(self, weights):
         self.df, fa_ptt = feat.create_PTT_df(self.fa_processed,

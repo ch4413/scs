@@ -88,6 +88,7 @@ def export(config):
                 log.loc[log['Run_ID']==int(run_ID),'Export_time'] = timestamp_string
                 # Write log back to scs folder
                 log.to_csv(log_path, index=False)
+                print('Run %s Output Exported Successfully' %run_ID)
             # Set load flag to 1 to exit loop
             load = 1
         else:
