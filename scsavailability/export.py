@@ -33,7 +33,7 @@ def export(config):
     # Load path and source
     log_path = r'%srun_log.csv' % config.path.package
     output_path = r'%s\outputs' % config.path.package
-    data_source = config.path.source
+    data_source = config.source
 
     # Set count and flag
     load = 0
@@ -79,6 +79,13 @@ def export(config):
                                      sql_conn=conn,
                                      tablename='newton_AzurePrep_MLCoefficients',
                                      schema='SOLAR')
+                else:
+                    log = pd.read_csv(log_path)
+                    # Set export time to unsuccesful and write table back to folder
+                    log['Export_time'].fillna('Export Unsuccessful',inplace=True)
+                    log.to_csv(log_path, index=False)
+                    # Exit code with error message
+                    sys.exit('Invalid Source')
 
                 # If successfully exported, load log
                 log = pd.read_csv(log_path)

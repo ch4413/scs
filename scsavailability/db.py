@@ -26,7 +26,7 @@ def get_credentials():
     --------
     user, password = get_credentials()
     """
-    filepath = pkg_resources.resource_stream(__name__, 'data/sql/sql_credentials.txt')
+    filepath = pkg_resources.resource_filename(__name__, 'data/sql/sql_credentials.txt')
     with open(filepath, 'r') as f:
         user, password = f.readlines()[0].split()
     return user, password

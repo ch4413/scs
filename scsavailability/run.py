@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import sys
 from copy import copy
 # Import modules
-from scsavailability import results as rs, db, parser as ps, scsdata
+from scsavailability import results as rs, db, parser as ps, scsdata, setupdir as sd
 
 
 def run(config):
@@ -25,6 +25,8 @@ def run(config):
     --------
     run(config)
     """
+
+    sd.setupdirectory(config.path.package)
     # Set run start time
     begin_time = datetime.now()
     # Load source, mode and paths from config
