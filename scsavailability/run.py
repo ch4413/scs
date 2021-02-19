@@ -26,6 +26,7 @@ def run(config):
     run(config)
     """
 
+    # Run automated set up of directory
     sd.setupdirectory(config.path.package)
     # Set run start time
     begin_time = datetime.now()

@@ -4,7 +4,7 @@ import pandas as pd
 
 @mark.pipeline
 @mark.db
-# @mark.skip(reason='Not connected')
+@mark.skip(reason='Not connected')
 class DBTests:
     def test_read_query(self):
         conn = db.mi_db_connection()

@@ -86,6 +86,7 @@ def setupdirectory(package_path):
     log_path = r'%srun_log.csv' % package_path
     output_path = r'%soutputs' % package_path
     archive_path = r'%soutputs\Archive' % package_path
+    test_results_path = r'%stests\TestData\TestResults' % package_path
 
     # Check if log exists
     checklog = Path(log_path)
@@ -149,3 +150,15 @@ def setupdirectory(package_path):
         except Exception:
             # If it fails to create exit code with message
             sys.exit("Creation of the directory %s failed, check package path in config" % archive_path)
+
+    # Check if test results directory exists
+    checktests = Path(test_results_path)
+    if checktests.is_dir():
+        pass
+    else:
+        try:
+            # If it doesn't exist, create it
+            os.mkdir(test_results_path)
+        except Exception:
+            # If it fails to create exit code with message
+            sys.exit("Creation of the directory %s failed, check package path in config" % test_results_path)

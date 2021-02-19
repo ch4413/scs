@@ -7,8 +7,7 @@ setup(name='scsavailability',
       author='Chris Hughes',
       author_email='christopher.hughes@bath.edu',
       include_package_data=True,
-      package_data={'Lookups': ['data/*.csv'],
-		        'SQL': ['data/sql/*']},
+      package_data={'': ['data/*.csv','data/sql/*']},
       url='https://www.python.org',
       packages=find_packages()
      )
