@@ -86,7 +86,7 @@ def setupdirectory(package_path):
     log_path = r'%srun_log.csv' % package_path
     output_path = r'%soutputs' % package_path
     archive_path = r'%soutputs\Archive' % package_path
-    test_results_path = r'%stests\TestData\TestResults' % package_path
+    test_results_path = r'%sscsavailability\tests\TestData\TestResults' % package_path
 
     # Check if log exists
     checklog = Path(log_path)

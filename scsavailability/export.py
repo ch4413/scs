@@ -5,12 +5,16 @@ from argparse import ArgumentParser
 import time
 from pathlib import Path
 import sys
+import os
 import re
 import shutil
 import urllib
 from sqlalchemy import create_engine
 # Import modules
-from scsavailability import db, parser as ps
+from scsavailability import db, parser as ps, setupdir as sd
+
+# Set number of threads to stop warning
+os.environ['NUMEXPR_NUM_THREADS'] = '8'
 
 def export(config):
 
@@ -30,6 +34,8 @@ def export(config):
     --------
     export(config)
     """
+    # Check if directory set up correctly
+    sd.setupdirectory(config.path.package)
     # Load path and source
     log_path = r'%srun_log.csv' % config.path.package
     output_path = r'%s\outputs' % config.path.package
