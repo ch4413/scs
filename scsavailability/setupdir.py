@@ -25,7 +25,7 @@ def create_log(path):
                                 'Timestamp',
                                 'R2',
                                 'Selected_Features',
-                                'Time',
+                                'Run_Time',
                                 'Train_Data_Start',
                                 'Train_Data_End',
                                 'Export_Time'])

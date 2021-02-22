@@ -98,7 +98,7 @@ def export(config):
                     log = pd.read_csv(log_path)
                     # Set export time to unsuccesful
                     # and write table back to folder
-                    log['Export_time'].fillna('Export Unsuccessful',
+                    log['Export_Time'].fillna('Export Unsuccessful',
                                               inplace=True)
                     log.to_csv(log_path, index=False)
                     # Exit code with error message
@@ -111,7 +111,7 @@ def export(config):
                 now = datetime.now()
                 timestamp_string = now.strftime("%d-%m-%Y_%H-%M-%S")
                 log.loc[log['Run_ID'] == int(run_ID),
-                        'Export_time'] = timestamp_string
+                        'Export_Time'] = timestamp_string
                 # Write log back to scs folder
                 log.to_csv(log_path, index=False)
                 print('Run %s Output Exported Successfully' % run_ID)
@@ -129,7 +129,7 @@ def export(config):
                 # Once 10 attempts have been tried, load log
                 log = pd.read_csv(log_path)
                 # Set export time to unsuccesful and write table back to folder
-                log['Export_time'].fillna('Export Unsuccessful', inplace=True)
+                log['Export_Time'].fillna('Export Unsuccessful', inplace=True)
                 log.to_csv(log_path, index=False)
                 # Exit code with error message
                 sys.exit('File Did Not Appear in Outputs Folder')
