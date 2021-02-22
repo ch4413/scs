@@ -26,7 +26,9 @@ def get_credentials():
     --------
     user, password = get_credentials()
     """
-    filepath = pkg_resources.resource_filename(__name__, 'data/sql/sql_credentials.txt')
+    filepath = pkg_resources.resource_filename(
+        __name__,
+        'data/sql/sql_credentials.txt')
     with open(filepath, 'r') as f:
         user, password = f.readlines()[0].split()
     return user, password
@@ -53,9 +55,8 @@ def mi_db_connection():
                                      'Server=mshsrmnsukc0139;'
                                      'Database=ODS;'
                                      'UID=%s;'
-                                     'PWD=%s' %(user,password))
-                                                 
-    sql_conn = create_engine("mssql+pyodbc:///?odbc_connect=%s" % params)                        
+                                     'PWD=%s' % (user, password))
+    sql_conn = create_engine("mssql+pyodbc:///?odbc_connect=%s" % params)
     return sql_conn
 
 
@@ -89,7 +90,10 @@ def read_query(sql_conn, query_path='../sql/test_query.sql'):
 
 
 @logger.logger
-def output_to_sql(output, sql_conn, tablename='newton_AzurePrep_MLCoefficients',schema='SOLAR'):
+def output_to_sql(output,
+                  sql_conn,
+                  tablename='newton_AzurePrep_MLCoefficients',
+                  schema='SOLAR'):
     """
     Summary
     -------
@@ -102,7 +106,7 @@ def output_to_sql(output, sql_conn, tablename='newton_AzurePrep_MLCoefficients',
     tablename: string
         table name in SQL Server to write to
     schema: string
-        schema where table is located        
+        schema where table is located
     Returns
     -------
     Example
@@ -118,4 +122,4 @@ def output_to_sql(output, sql_conn, tablename='newton_AzurePrep_MLCoefficients',
                   schema=schema,
                   if_exists='replace',
                   index=False)
-    print('Output sucessfully written to SQL Server')              
+    print('Output sucessfully written to SQL Server')
